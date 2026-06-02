@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/career_app
+    username: postgres
+    password: password
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET}
+    expiration: 3600
+  cors:
+    allowed-origins: http://localhost:3000

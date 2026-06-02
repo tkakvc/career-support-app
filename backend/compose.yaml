@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres:16
+
+    container_name: career-postgres
+
+    environment:
+      POSTGRES_DB: career_app
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+
+    ports:
+      - "5432:5432"
