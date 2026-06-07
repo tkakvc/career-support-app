@@ -2,6 +2,8 @@ package com.example.backend.controller;
 
 import com.example.backend.dto.request.LearningRecordCreateRequest;
 import com.example.backend.dto.request.LearningRecordSearchCriteria;
+import com.example.backend.dto.request.LearningRecordUpdateRequest;
+import com.example.backend.dto.response.DeleteResponse;
 import com.example.backend.dto.response.LearningRecordResponse;
 import com.example.backend.service.LearningRecordService;
 import jakarta.validation.Valid;
@@ -37,5 +39,17 @@ public class LearningRecordController {
     public LearningRecordResponse create(@AuthenticationPrincipal UUID userId,
                                          @Valid @RequestBody LearningRecordCreateRequest request) {
         return learningRecordService.createLearningRecord(userId, request);
+    }
+
+    @PutMapping("/{id}")
+    public LearningRecordResponse update(@AuthenticationPrincipal UUID userId,
+                                         @PathVariable UUID id,
+                                         @Valid @RequestBody LearningRecordUpdateRequest request) {
+        return learningRecordService.update(userId, id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    public DeleteResponse delete(@AuthenticationPrincipal UUID userId, @PathVariable UUID id) {
+        return learningRecordService.delete(userId, id);
     }
 }

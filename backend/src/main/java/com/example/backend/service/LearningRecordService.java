@@ -2,6 +2,8 @@ package com.example.backend.service;
 
 import com.example.backend.dto.request.LearningRecordCreateRequest;
 import com.example.backend.dto.request.LearningRecordSearchCriteria;
+import com.example.backend.dto.request.LearningRecordUpdateRequest;
+import com.example.backend.dto.response.DeleteResponse;
 import com.example.backend.dto.response.LearningRecordResponse;
 import com.example.backend.entity.LearningRecord;
 import com.example.backend.entity.Tag;
@@ -81,5 +83,40 @@ public class LearningRecordService {
 
         // ④ 保存した Entity を Response に変換して返す
         return new LearningRecordResponse(saved);
+    }
+
+    @Transactional
+    public LearningRecordResponse update(UUID userId, UUID id, LearningRecordUpdateRequest request) {
+        LearningRecord record = learningRecordRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("学習記録が見つかりません"));
+        if (!record.getUserId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "他のユーザーの学習記録は更新できません");
+        }
+
+        record.setDate(request.getDate());
+        record.setContent(request.getContent());
+        record.setDuration(request.getDuration());
+
+        // tagIds が null のとき既存タグを維持。それ以外は差し替え。
+        if (request.getTagIds() != null) {
+            List<Tag> tags = tagRepository.findAllById(request.getTagIds());
+            if (tags.size() != request.getTagIds().size()) {
+                throw new ResourceNotFoundException("指定されたタグが見つかりません");
+            }
+            record.setTags(tags);
+        }
+
+        return new LearningRecordResponse(learningRecordRepository.save(record));
+    }
+
+    @Transactional
+    public DeleteResponse delete(UUID userId, UUID id) {
+        LearningRecord record = learningRecordRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("学習記録が見つかりません"));
+        if (!record.getUserId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "他のユーザーの学習記録は削除できません");
+        }
+        learningRecordRepository.delete(record);
+        return new DeleteResponse();
     }
 }
