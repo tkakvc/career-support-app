@@ -60,6 +60,7 @@ assets/          静的ファイル
 ```
 users
   └─ learning_records (1:N)
+  │    └─ learning_record_attachments (1:N)
   └─ tasks (1:N)
   └─ career_notes (1:1)
   └─ tech_skills (1:N)
@@ -117,6 +118,18 @@ users
 |---|---|---|---|
 | learning_record_id | UUID | FK(learning_records.id) | 学習記録 ID |
 | tag_id | UUID | FK(tags.id) | タグ ID |
+
+#### learning_record_attachments
+
+| カラム名 | 型 | 制約 | 説明 |
+|---|---|---|---|
+| id | UUID | PK | 添付ファイル ID |
+| learning_record_id | UUID | FK(learning_records.id), NOT NULL | 学習記録 ID |
+| file_name | VARCHAR(255) | NOT NULL | 元のファイル名（ユーザーがアップロードした名前） |
+| storage_key | VARCHAR(500) | NOT NULL | S3 上の保存パス（例: attachments/{userId}/{uuid}/file.pdf） |
+| content_type | VARCHAR(100) | NOT NULL | ファイルの種類（例: image/png, application/pdf） |
+| file_size | BIGINT | NOT NULL | ファイルサイズ（バイト） |
+| created_at | TIMESTAMP | NOT NULL | アップロード日時 |
 
 #### tasks
 
@@ -273,7 +286,46 @@ users
 | PUT | /api/v1/learning-resources/{id} | 媒体更新 |
 | DELETE | /api/v1/learning-resources/{id} | 媒体削除 |
 
-### 3.9 GitHub 連携 API
+### 3.9 ファイル添付 API
+
+学習記録に紐づくファイルを管理する。
+
+| メソッド | パス | 説明 |
+|---|---|---|
+| GET | /api/v1/study-records/{id}/attachments | 添付ファイル一覧取得 |
+| POST | /api/v1/study-records/{id}/attachments | ファイルアップロード |
+| GET | /api/v1/study-records/{id}/attachments/{attachmentId}/download | ファイルダウンロード |
+| DELETE | /api/v1/study-records/{id}/attachments/{attachmentId} | 添付ファイル削除 |
+
+**POST /api/v1/study-records/{id}/attachments リクエスト：**
+
+`Content-Type: multipart/form-data` でファイルを送信する。
+
+**レスポンス例：**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "fileName": "spring-boot-memo.pdf",
+  "contentType": "application/pdf",
+  "fileSize": 102400,
+  "createdAt": "2026-06-06T10:00:00"
+}
+```
+
+**GET /api/v1/study-records/{id}/attachments/{attachmentId}/download：**
+
+ファイルのバイト列をレスポンスボディに含めて返す。  
+`Content-Disposition: attachment; filename="spring-boot-memo.pdf"` ヘッダーを付与することで、ブラウザに「保存ダイアログ」を表示させる。
+
+**バリデーション：**
+
+| 項目 | ルール |
+|---|---|
+| ファイルサイズ | 1ファイルあたり 10MB 以下 |
+| 添付数 | 学習記録1件あたり 10ファイル以下 |
+| ファイル形式 | 制限なし（MIMEタイプを DB に記録） |
+
+### 3.10 GitHub 連携 API
 
 | メソッド | パス | 説明 |
 |---|---|---|
@@ -282,7 +334,7 @@ users
 | GET | /api/v1/github/contributions | Contributions 取得 |
 | GET | /api/v1/github/issues | Issue 一覧取得 |
 
-### 3.10 AI API
+### 3.11 AI API
 
 | メソッド | パス | 説明 |
 |---|---|---|
@@ -398,7 +450,7 @@ users
 |---|---|---|
 | EC2 | Spring Boot アプリ実行 | t2.micro（無料枠） |
 | RDS | PostgreSQL | t2.micro（無料枠） |
-| S3 | 画像保存（必要時） | 任意 |
+| S3 | ファイル添付の保存先（画像・PDF 等） | ファイル添付機能で必須 |
 | Security Group | アクセス制御 | 80/443/8080 のみ開放 |
 
 ### 6.2 環境一覧
@@ -484,6 +536,7 @@ src/main/java/com/example/careersupport/
 ├── controller/
 │   ├── AuthController.java
 │   ├── StudyRecordController.java
+│   ├── AttachmentController.java
 │   ├── TaskController.java
 │   ├── CareerNoteController.java
 │   ├── TechSkillController.java
@@ -493,6 +546,8 @@ src/main/java/com/example/careersupport/
 ├── service/
 │   ├── AuthService.java
 │   ├── StudyRecordService.java
+│   ├── AttachmentService.java
+│   ├── StorageService.java
 │   ├── TaskService.java
 │   ├── CareerNoteService.java
 │   ├── TechSkillService.java
@@ -502,6 +557,7 @@ src/main/java/com/example/careersupport/
 ├── repository/
 │   ├── UserRepository.java
 │   ├── StudyRecordRepository.java
+│   ├── AttachmentRepository.java
 │   ├── TaskRepository.java
 │   ├── CareerNoteRepository.java
 │   ├── TechSkillRepository.java
@@ -509,6 +565,7 @@ src/main/java/com/example/careersupport/
 ├── entity/
 │   ├── User.java
 │   ├── StudyRecord.java
+│   ├── Attachment.java
 │   ├── Task.java
 │   ├── CareerNote.java
 │   ├── TechSkill.java
