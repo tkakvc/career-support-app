@@ -90,7 +90,7 @@ users
 - 学習記録には複数のタグを付与可能
 - タグは検索や集計にも利用する
 
-タグの詳細なAPI仕様・データモデルは docs/api/learning-records/ 配下を参照
+タグの詳細なAPI仕様・データモデルは docs/learning-records/api/ 配下を参照
 
 #### learning_records
 
