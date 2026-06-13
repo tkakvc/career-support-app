@@ -224,8 +224,11 @@ GitHub API を利用して以下を取得・表示する。
 
 | 項目 | 技術 |
 |---|---|
-| Frontend | Vue3 + Nuxt |
-| UI Framework | Vuetify |
+| Frontend | React + Next.js (App Router) |
+| UI Framework | shadcn/ui (Radix UI + Tailwind CSS) |
+| サーバー状態管理 | TanStack Query |
+| クライアント状態管理 | Zustand |
+| フォーム・バリデーション | React Hook Form + Zod |
 | Backend | Spring Boot |
 | DB | PostgreSQL |
 | 認証 | Spring Security + JWT |
@@ -259,7 +262,7 @@ GitHub API を利用して以下を取得・表示する。
 | カテゴリ | 技術・観点 |
 |---|---|
 | Backend | Spring Boot / REST API / JWT 認証 |
-| Frontend | Vue3 / Nuxt / Vuetify |
+| Frontend | React / Next.js (App Router) / shadcn/ui / TanStack Query / Zustand |
 | インフラ | Docker / AWS（ECS Fargate・RDS・ALB・CloudFront）/ Terraform |
 | 非同期処理 | SQS + Lambda によるAI分析リクエストの非同期化 |
 | ストレージ | S3 によるファイル添付（画像・PDF・テキスト等）/ ダウンロード対応 |
