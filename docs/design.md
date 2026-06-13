@@ -15,11 +15,11 @@
     │
     │ HTTPS
     ▼
-[Nuxt (Vue3 + Vuetify)]  ← フロントエンド (EC2 or Vercel)
+[Next.js (React + shadcn/ui)]  ← フロントエンド (EC2 or Vercel)
     │
     │ REST API (JSON / JWT)
     ▼
-[Spring Boot]             ← バックエンド (EC2)
+[Spring Boot]                   ← バックエンド (EC2)
     │
     ├─ PostgreSQL (RDS)
     ├─ GitHub API
@@ -40,15 +40,19 @@ Entity           DB テーブルマッピング
 DTO              Controller ↔ Service 間のデータ受け渡し
 ```
 
-### 1.3 フロントエンド：Nuxt ディレクトリ構成
+### 1.3 フロントエンド：Next.js ディレクトリ構成
 
 ```
-pages/           ルーティング対応ページ
+app/             App Router によるルーティング（ページ = page.tsx）
 components/      再利用可能 UI コンポーネント
-composables/     状態管理・ロジック（useState / useFetch 等）
-services/        API 呼び出し処理
-middleware/      認証ガード等
-assets/          静的ファイル
+  ui/            shadcn/ui から生成したベースコンポーネント
+  common/        AppHeader / AppSidebar 等
+  study/ tasks/  機能別コンポーネント
+hooks/           カスタムフック（TanStack Query ラッパー等）
+services/        API 呼び出し処理（fetch / axios）
+lib/             Zod スキーマ・ユーティリティ
+store/           Zustand ストア
+middleware.ts    認証ガード（Next.js Middleware）
 ```
 
 ---
@@ -464,7 +468,7 @@ users
 
 ```yaml
 services:
-  frontend:     # Nuxt (port 3000)
+  frontend:     # Next.js (port 3000)
   backend:      # Spring Boot (port 8080)
   db:           # PostgreSQL (port 5432)
 ```
@@ -581,43 +585,64 @@ src/main/java/com/example/careersupport/
     └── CorsConfig.java
 ```
 
-### 9.2 フロントエンド（Nuxt）
+### 9.2 フロントエンド（Next.js）
 
 ```
-pages/
-├── index.vue          # ダッシュボード
-├── login.vue
-├── signup.vue
-├── study/
-│   ├── index.vue      # 一覧
-│   └── [id].vue       # 詳細・編集
-├── tasks/
-│   └── index.vue
-├── career.vue
-├── skills.vue
-├── resources.vue
-├── github.vue
-├── ai.vue
-└── settings.vue
+app/
+├── (auth)/
+│   ├── login/
+│   │   └── page.tsx
+│   └── signup/
+│       └── page.tsx
+├── (dashboard)/
+│   ├── layout.tsx          # サイドナビ・ヘッダー共通レイアウト
+│   ├── page.tsx            # ダッシュボード
+│   ├── study/
+│   │   ├── page.tsx        # 学習記録一覧
+│   │   └── [id]/
+│   │       └── page.tsx    # 学習記録詳細・編集
+│   ├── tasks/
+│   │   └── page.tsx
+│   ├── career/
+│   │   └── page.tsx
+│   ├── skills/
+│   │   └── page.tsx
+│   ├── resources/
+│   │   └── page.tsx
+│   ├── github/
+│   │   └── page.tsx
+│   ├── ai/
+│   │   └── page.tsx
+│   └── settings/
+│       └── page.tsx
+├── layout.tsx
+└── globals.css
 components/
+├── ui/                     # shadcn/ui 生成コンポーネント（Button / Input / Card 等）
 ├── common/
-│   ├── AppHeader.vue
-│   ├── AppSidebar.vue
-│   └── AppSnackbar.vue
+│   ├── AppHeader.tsx
+│   ├── AppSidebar.tsx
+│   └── AppToast.tsx
 ├── study/
 ├── tasks/
 ├── career/
 └── ai/
-composables/
-├── useAuth.ts
-├── useStudyRecords.ts
+hooks/
+├── useAuth.ts              # 認証状態管理（Zustand）
+├── useStudyRecords.ts      # TanStack Query ラッパー
 ├── useTasks.ts
 └── useAi.ts
 services/
-├── api.ts             # Axios インスタンス
+├── api.ts                  # axios インスタンス（JWT ヘッダー付与）
 ├── studyService.ts
 ├── taskService.ts
 └── aiService.ts
+lib/
+├── schemas.ts              # Zod バリデーションスキーマ
+└── utils.ts                # shadcn/ui の cn() 等ユーティリティ
+store/
+└── authStore.ts            # Zustand ストア
+middleware.ts               # 未認証ユーザーを /login にリダイレクト
 ```
 
 ---

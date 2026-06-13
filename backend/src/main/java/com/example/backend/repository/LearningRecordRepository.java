@@ -30,4 +30,9 @@ public interface LearningRecordRepository extends JpaRepository<LearningRecord, 
     // AI学習提案用：直近30件をタグ込みで取得する
     @Query("SELECT DISTINCT r FROM LearningRecord r LEFT JOIN FETCH r.tags WHERE r.userId = :userId ORDER BY r.date DESC LIMIT 30")
     List<LearningRecord> findTop30WithTagsByUserId(@Param("userId") UUID userId);
+    // FETCHについて
+    // Javaでテーブルをオブジェクトで扱うためです。
+    // javarecord.getTags() // タグを取得
+    // record.getDate() // 日付を取得
+    // テーブルじゃなくてオブジェクトとして扱える方が便利、という思想で作られたのがJPAです。
 }

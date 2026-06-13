@@ -34,6 +34,11 @@ storage:
   local:
     base-path: uploads
 
+
+# APIキーが漏れるリスクがあるため。WARN にするとエラー・警告だけ出て通信内容は出なくなる。
+# [] で囲む理由：ドット（.）を含む文字列は YAML で誤解されることがあるため、文字列だと明示する。
 logging:
   level:
+    # org.springframework.ai = Spring AI のコードが入っているパッケージ（Javaのフォルダの階層）
+    # この1行で「Spring AI 関連のコード全部のログを WARN 以上だけ出す」という設定になる
     "[org.springframework.ai]": WARN

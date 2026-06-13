@@ -69,8 +69,11 @@
 
 | 項目 | 技術 |
 |---|---|
-| Frontend | Vue3 + Nuxt |
-| UI Framework | Vuetify |
+| Frontend | React + Next.js (App Router) |
+| UI Framework | shadcn/ui (Radix UI + Tailwind CSS) |
+| サーバー状態管理 | TanStack Query |
+| クライアント状態管理 | Zustand |
+| フォーム・バリデーション | React Hook Form + Zod |
 | Backend | Spring Boot |
 | DB | PostgreSQL |
 | 認証 | Spring Security + JWT |
@@ -80,31 +83,78 @@
 
 ---
 
-# 6. Nuxt / Vuetify を使うべきか
+# 6. Next.js / shadcn/ui を使う理由
 
 # 結論
 
-## Nuxt
-→ 使った方が良い
+## Next.js (App Router)
+→ React の標準フレームワークとして採用
 
 理由：
 
-- Vue3学習になる
-- ディレクトリ構成整理しやすい
-- 実務感がある
-- SPA構成理解しやすい
+- React は国内外の求人で最も需要が高い（転職で直結する）
+- App Router により pages/ ではなく app/ でルーティングを管理する
+  - 例：`app/study/page.tsx` にファイルを置くだけで `/study` にルーティングされる
+- サーバーコンポーネント / クライアントコンポーネントの概念を学べる
+- Vercel との親和性が高く、デプロイが容易
 
 ---
 
-## Vuetify
-→ 使った方が良い
+## shadcn/ui
+→ UIコンポーネントライブラリとして採用
 
 理由：
 
-- UI作成速度が大幅に上がる
-- 見た目が整う
-- 実装コスト削減
-- AIとの相性が良い
+- **コンポーネントを「コピー」して自分のコードベースに持つ**設計思想
+  - `npx shadcn-ui@latest add button` を実行すると `components/ui/button.tsx` が生成される
+  - Vuetify のように「ライブラリが管理するコンポーネント」ではなく、自分で所有するコードになる
+- Radix UI（アクセシビリティ対応のヘッドレスUI）+ Tailwind CSS の組み合わせ
+- 企業の採用率が急上昇しており、ポートフォリオでのアピール度が高い
+- デザインのカスタマイズ自由度が高い
+
+---
+
+## TanStack Query（旧 React Query）
+→ APIデータ取得・キャッシュ管理として採用
+
+理由：
+
+- `useQuery` でAPIを呼ぶだけで、ローディング状態・エラー状態・キャッシュを自動管理する
+  ```tsx
+  // これだけで /api/v1/study-records の取得・再フェッチ・キャッシュが完結する
+  const { data, isLoading } = useQuery({
+    queryKey: ['studyRecords'],
+    queryFn: studyService.getAll,
+  });
+  ```
+- 実務で最も使われているデータフェッチライブラリ
+
+---
+
+## Zustand
+→ クライアント側の状態管理（ログイン状態など）として採用
+
+理由：
+
+- Redux より大幅にシンプル
+- JWTトークンやログインユーザー情報を `authStore.ts` 1ファイルで管理できる
+
+---
+
+## React Hook Form + Zod
+→ フォーム入力・バリデーションとして採用
+
+理由：
+
+- React Hook Form: フォームの状態管理を簡潔に書ける
+- Zod: TypeScript で型安全なバリデーションスキーマを定義できる
+  ```tsx
+  // Zodスキーマで「contentは最大2000文字」というルールを型として定義する
+  const schema = z.object({
+    content: z.string().max(2000),
+    duration: z.number().min(1),
+  });
+  ```
 
 ---
 
@@ -165,12 +215,14 @@
 
 ## Frontend
 
-Nuxt構成を利用し、
+Next.js (App Router) 構成を利用し、
 
-- pages
-- components
-- composables
-- services
+- app（ルーティング + ページコンポーネント）
+- components（UI・機能別コンポーネント）
+- hooks（TanStack Query ラッパー等のカスタムフック）
+- services（APIリクエスト処理）
+- store（Zustand ストア）
+- lib（Zodスキーマ・ユーティリティ）
 
 を整理する。
 
@@ -396,8 +448,10 @@ OpenAI APIを利用し、
 - Spring Boot
 - REST API
 - JWT認証
-- Vue/Nuxt
-- Vuetify
+- React / Next.js (App Router)
+- shadcn/ui / Tailwind CSS
+- TanStack Query / Zustand
+- React Hook Form + Zod
 - Docker
 - AWS
 - GitHub API

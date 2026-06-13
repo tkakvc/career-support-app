@@ -25,9 +25,15 @@ public class SuggestResponse {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String message;
 
-    // static class にする理由：
-    //   SuggestResponse の外から使う必要がないので、SuggestResponse の中に閉じ込める。
-    //   static を付けることで SuggestResponse のインスタンスなしで使える内部クラスになる。
+    // Suggestion を SuggestResponse の内部に書いている理由：
+    //   Suggestion は SuggestResponse の中でしか使わないので、同じファイル内にまとめている。
+    //
+    // static を付ける理由：
+    //   static なしの内部クラスは「外側のクラスのオブジェクトが先に存在しないと作れない」というJavaの仕様がある。
+    //   つまり static なしだと、Suggestion を作るには先に SuggestResponse のオブジェクトが必要になる。
+    //   Jackson は JSON をパースするとき Suggestion を単独で作ろうとするため、この制約があると失敗する。
+    //   static を付けると「SuggestResponse のオブジェクトなしで Suggestion だけを作れる」ようになるので、
+    //   Jackson が問題なく Suggestion を作れる。
     @Getter
     @Setter
     @NoArgsConstructor

@@ -207,9 +207,16 @@ public class AiService {
     // 過去24時間以内のリクエスト数が10回未満かチェックする。
     //
     // 【Instant とは】
-    //   Java で「ある時点」を表すクラス。
-    //   Instant.now() で現在時刻を取得できる。
-    //   minus(24, ChronoUnit.HOURS) で「24時間前」の時刻を計算できる。
+    //   Java で「ある時点」を表すクラス。内部では「1970年1月1日 0時0分0秒から何秒経ったか」という数値で時刻を管理している。
+    //   Instant.now() は「このコードが実行された瞬間の時刻」を取得する。
+    //
+    //   minus(24, ChronoUnit.HOURS) は「その時刻から24時間を引く」という計算。
+    //   ChronoUnit.HOURS は「単位が時間（HOURS）」という指定。ChronoUnit は「時間の単位」を表す定数の一覧。
+    //   例えば今が 2026/06/09 15:00 なら、minus(24, ChronoUnit.HOURS) の結果は 2026/06/08 15:00 になる。
+    //
+    //   つまり `Instant oneDayAgo = Instant.now().minus(24, ChronoUnit.HOURS)` は
+    //   「今から24時間前の時刻」を oneDayAgo という変数に入れている。
+    //   この値を使って「24時間より古いリクエスト記録は捨てる」という判定を下の行でやっている。
     //
     // 【synchronized とは】
     //   「このブロックは1スレッドずつ順番に実行する」という指定。
@@ -235,24 +242,52 @@ public class AiService {
     // ============================================================
     // プロンプト組み立て（private）
     // ============================================================
-    //
-    // LearningRecord のリストを「2026/06/08: 内容（タグ: Java, Spring）」の形式に変換する。
-    //
-    // 【stream().map().collect() とは】
-    //   リストの各要素を変換して新しいリストを作るJavaの書き方。
-    //   JavaScriptの .map() と同じ発想。
-    //   Collectors.joining("\n") は「\n（改行）で区切って1つの文字列にまとめる」という意味。
-    //
     private String buildSuggestPrompt(List<LearningRecord> records) {
+        // records（学習記録のリスト）を OpenAI に渡せる1つの文字列に変換する。
+        //
+        // 変換のイメージ：
+        //   入力: [
+        //     LearningRecord{ date="2026/06/01", content="Springを勉強した", tags=[Tag{name="Java"}, Tag{name="Spring"}] },
+        //     LearningRecord{ date="2026/06/02", content="SQLを書いた",      tags=[] }
+        //   ]
+        //   出力:
+        //     "2026/06/01: Springを勉強した（タグ: Java, Spring）\n2026/06/02: SQLを書いた"
+        //
+        // 【stream() とは】
+        //   リストの要素を1つずつ処理するための準備。これを書くことで map() や collect() が使えるようになる。
+        //   ※ 「リストに対して変換処理をするときに書くもの」と覚えておけばよい。
+        //
+        // 【map() とは】
+        //   リストの各要素を別の形に変換するメソッド。
+        //   ここでは学習記録1件（r）を1行の文字列に変換している。
+        //   例: LearningRecord{...} → "2026/06/01: Springを勉強した（タグ: Java, Spring）"
+        //
+        // 【collect() とは】
+        //   stream() と map() で変換した結果を1つにまとめるメソッド。
+        //   「どうまとめるか」を Collectors で指定する。
+        //   例: collect(Collectors.joining(", "))  → ["Java", "Spring"] を "Java, Spring" にまとめる
+        //       collect(Collectors.joining("\n"))  → 各行を改行で繋げて1つの文字列にまとめる
+        //       collect(Collectors.toList())       → リストにまとめる
+        //   ※ toList() と joining() は毎日使うので自然に覚える。他は使うときに調べればよい。
+        //
+        // 【Tag::getName とは】
+        //   tag -> tag.getName() と同じ意味。各タグオブジェクトから name だけ取り出す。
+        //   例: Tag{name="Java"} → "Java"
+        //   ※ :: の書き方（メソッド参照）は慣れてきたら使えばよい。最初は tag -> tag.getName() と書いても同じ。
         String recordsText = records.stream()
                 .map(r -> {
+                    // タグのリストを "Java, Spring" のような文字列に変換する
                     String tags = r.getTags().stream()
-                            .map(Tag::getName)
-                            .collect(Collectors.joining(", "));
+                            .map(Tag::getName)                      // Tag{name="Java"} → "Java"
+                            .collect(Collectors.joining(", "));     // ["Java", "Spring"] → "Java, Spring"
+
+                    // タグがあれば "（タグ: Java, Spring）"、なければ空文字にする
                     String tagPart = tags.isEmpty() ? "" : "（タグ: " + tags + "）";
+
+                    // "2026/06/01: Springを勉強した（タグ: Java, Spring）" の形の1行を返す
                     return r.getDate() + ": " + r.getContent() + tagPart;
                 })
-                .collect(Collectors.joining("\n"));
+                .collect(Collectors.joining("\n")); // 各行を改行で繋げて1つの文字列にまとめる
 
         return "以下の学習記録をもとに、このエンジニアが次に学ぶべき技術を3つ提案してください。\n\n【直近の学習記録】\n" + recordsText;
     }
