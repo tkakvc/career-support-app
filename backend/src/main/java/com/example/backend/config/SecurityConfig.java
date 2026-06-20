@@ -46,6 +46,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // /api/auth/** は認証不要（ログイン・サインアップはトークンなしで呼べる）
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()  // 追加
                 // それ以外は認証必須
                 .anyRequest().authenticated())
 

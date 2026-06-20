@@ -1,13 +1,51 @@
-services:
-  db:
-    image: postgres:16
+# このファイルは「複数のコンテナをまとめて起動する設定」を書く場所。
+# `docker compose up` を1回実行すると、下に書いたサービスが全部起動する。
 
-    container_name: career-postgres
+services:  # 起動するコンテナの一覧をここに書く。「サービス」= 1つのコンテナのこと。
 
-    environment:
-      POSTGRES_DB: career_app
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+  db:  # このサービスの名前。「db」という名前は自分でつけた任意の名前。
+       # この名前が Docker ネットワーク内でのホスト名になる（app から db という名前で接続できる）。
+
+    image: postgres:16  # Docker Hub から「postgres バージョン16」のイメージを取得して使う。
+                        # Dockerfile を書かずに済む公式イメージ。
+
+    container_name: career-postgres  # 起動したコンテナに付ける名前。`docker ps` で確認できる。
+                                     # 指定しないと Docker がランダムな名前をつける。
+
+    environment:          # コンテナ内で使える環境変数を設定する。
+      POSTGRES_DB: career_app      # 起動時に自動作成するデータベースの名前。
+      POSTGRES_USER: postgres      # PostgreSQL にログインするユーザー名。
+      POSTGRES_PASSWORD: password  # そのユーザーのパスワード。
 
     ports:
-      - "5432:5432"
+      - "5432:5432"  # 「ホストの5432番ポート : コンテナの5432番ポート」をつなぐ。
+                     # 左がPC側、右がコンテナ側。
+                     # これにより手元のPC から localhost:5432 で DB に接続できる。
+
+  app:  # Spring Boot アプリのサービス。名前は自分でつけた任意の名前。
+
+    build:              # image を使わず、Dockerfile からイメージをビルドする場合に書く。
+      context: .        # Dockerfile を探す起点のディレクトリ。「.」= compose.yaml と同じ場所。
+      dockerfile: Dockerfile  # 使う Dockerfile のファイル名。
+
+    container_name: career-app  # コンテナの名前。`docker ps` でこの名前が表示される。
+
+    ports:
+      - "8080:8080"  # ホストの8080番とコンテナの8080番をつなぐ。
+                     # これにより http://localhost:8080 で Spring Boot の API にアクセスできる。
+
+    environment:
+      # application.yaml の `spring.datasource.url` をここで上書きしている。
+      # application.yaml には `localhost:5432` と書いてあるが、
+      # コンテナ内から見た「localhost」はコンテナ自身を指すので DB に届かない。
+      # Docker Compose ではサービス名がホスト名になるため、`db` と書くと DB コンテナに届く。
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/career_app
+      SPRING_DATASOURCE_USERNAME: postgres   # application.yaml の spring.datasource.username を上書き。
+      SPRING_DATASOURCE_PASSWORD: password   # application.yaml の spring.datasource.password を上書き。
+      APP_JWT_SECRET: dev-secret-key-for-local-development-only  # JWT トークンの署名に使う秘密鍵。ローカル開発用の値。
+      OPENAI_API_KEY: dummy-key-for-local  # 起動チェックを通過するためのダミー値。
+                                          # AI機能を実際に呼んだときはエラーになるが、起動自体はできる。
+
+    depends_on:
+      - db  # `app` を起動する前に `db` を先に起動するよう順番を指定する。
+            # これがないと DB より先に Spring Boot が起動して接続エラーになる可能性がある。
