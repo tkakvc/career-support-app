@@ -1,5 +1,11 @@
 package com.example.backend.dto.request;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【AI任せでOK】DTO（Data Transfer Object）クラスのフィールド定義・@NotBlank / @Size などのアノテーション
+//   → DTOは「リクエストのJSONをJavaオブジェクトに変換するだけ」のクラス。ロジックは書かない。
+//   → バリデーションアノテーション（@NotBlank, @Size）の書き方はドキュメントを見ればわかる。
+// ============================================================
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;

@@ -1,5 +1,15 @@
 package com.example.backend.service;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【面接で説明できるようにする】なぜ StorageService インターフェースを実装するか（インターフェースを使う理由）
+//   → AttachmentService は StorageService 型のフィールドに依存している。
+//     開発環境では LocalStorageService（ローカルのファイルシステム）を使い、
+//     本番環境では S3StorageService（Amazon S3）を使いたいとする。
+//     インターフェースを挟むことで AttachmentService を一切変更せずに実装を切り替えられる（依存性逆転の原則）。
+//     @ConditionalOnProperty で設定ファイルの値によって自動で実装が切り替わる。
+// 【AI任せでOK】@ConditionalOnProperty / @Value の書き方・Files.write() / Files.readAllBytes() の使い方
+// ============================================================
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;

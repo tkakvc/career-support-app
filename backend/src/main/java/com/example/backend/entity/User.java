@@ -1,5 +1,15 @@
 package com.example.backend.entity;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【AI任せでOK】@Entity / @Table / @Column などの JPA アノテーションの書き方
+//   → @CreationTimestamp / @UpdateTimestamp の Hibernate アノテーションは覚えなくていい
+//   → Lombok の @Builder / @Getter / @Setter / @NoArgsConstructor / @AllArgsConstructor は覚えなくていい
+// 【面接で説明できるようにする】なぜ passwordHash フィールドを持ち、password フィールドを持たないか
+//   → 平文パスワードをDBに保存すると、DBが漏洩した瞬間に全ユーザーのパスワードが流出する。
+//     BCrypt でハッシュ化した値（passwordHash）だけを保存することで、
+//     漏洩してもハッシュから元のパスワードを逆算できないため被害を最小化できる。
+// ============================================================
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;

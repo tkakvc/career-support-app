@@ -1,5 +1,18 @@
 package com.example.backend.service;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【面接で説明できるようにする】なぜ Controller には処理を書かず Service に書くか（レイヤードアーキテクチャ）
+//   →「OpenAI に送るプロンプトの組み立て」「レート制限チェック」「JSONのパース」は
+//     ビジネスロジックであり、Controller の責務（HTTP の入出力）ではない。
+//     Service に書くことで Controller はシンプルに保ち、Service 単体でテストできる。
+// 【面接で説明できるようにする】なぜ @Cacheable でキャッシュするか
+//   → OpenAI API は呼び出しごとにコストがかかる。同じユーザーの提案は24時間同じでよいため、
+//     1回目の結果をキャッシュして2回目以降は OpenAI を呼ばずに返す。
+//     AiConfig で設定した Caffeine キャッシュと @Cacheable の value / key が名前で紐づく。
+// 【AI任せでOK】@Cacheable / @Transactional の書き方・ConcurrentHashMap のスレッドセーフな書き方
+// 【AI任せでOK】正規表現（Pattern.compile）の書き方・objectMapper.readValue の使い方
+// ============================================================
 import com.example.backend.dto.response.DecomposeResponse;
 import com.example.backend.dto.response.SuggestResponse;
 import com.example.backend.entity.LearningRecord;

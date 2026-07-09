@@ -1,7 +1,18 @@
+// ============================================================
+// 【このファイル全体の方針】
+// 【面接で説明できるようにする】なぜ Zustand を使うか（グローバル状態管理の理由）
+//   → JWT トークン・userId・displayName はログイン後にアプリ全体で使う情報。
+//     これを props で渡していくと「バケツリレー（prop drilling）」になり、
+//     何層も深いコンポーネントにまで渡すのが大変になる。
+//     Zustand を使えば、どのコンポーネントからでも useAuthStore() 1行で取り出せる。
+// 【面接で説明できるようにする】なぜ persist で localStorage に保存するか
+//   → persist なしだと、ページをリロードするたびに token が null に戻りログアウト状態になる。
+//     localStorage に保存することで、ブラウザを閉じても再訪問時にトークンを復元できる。
+// 【AI任せでOK】create<AuthState>()() の二重括弧の構文・persist の書き方
+// ============================================================
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-// persist は「Zustand の状態を localStorage に自動保存する」ミドルウェア。
-// ミドルウェア = 処理の途中に割り込んで何かをする仕組み。
+// persist は「ストアの定義を包むと、localStorage への保存・復元を自動でやってくれる関数」。
 // persist がないと、ページリロードで token・userId・displayName が全部 null に戻る。
 
 // ▼ AuthState：このストアが持つ「値」と「アクション」の型定義

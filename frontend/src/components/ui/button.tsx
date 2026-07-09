@@ -1,3 +1,13 @@
+// ============================================================
+// 【このファイル全体の方針】
+// 【AI任せでOK】このファイルは shadcn/ui が自動生成するボイラープレート
+//   → cva / buttonVariants の中の Tailwind クラス名の組み合わせは覚えなくていい
+//   → variant / size の具体的な値（"default" | "outline" など）はドキュメントを見ればわかる
+// 【面接で説明できるようにする】なぜ cva（class-variance-authority）を使うか
+//   → variant（見た目の種類：primary / outline など）と size を組み合わせた
+//     クラス名を動的に生成できるライブラリ。
+//     条件分岐で className を手書きすると複雑になるが、cva を使うと宣言的に書ける。
+// ============================================================
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"

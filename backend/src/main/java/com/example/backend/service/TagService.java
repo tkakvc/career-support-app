@@ -1,5 +1,16 @@
 package com.example.backend.service;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【面接で説明できるようにする】なぜ Controller には処理を書かず Service に書くか（レイヤードアーキテクチャ）
+//   →「defaultタグは編集・削除不可」「他のユーザーのタグは変更不可」「同名タグは重複不可」といった
+//     ビジネスルールはすべて Service の責務。Controller に書くと肥大化してテストが書けなくなる。
+// 【面接で説明できるようにする】なぜ @Transactional を付けるか
+//   → DB操作の途中で例外が起きたとき、途中まで保存された中途半端な状態にならないよう
+//     自動でロールバックしてくれる（原子性の保証）。
+//     readOnly = true を付けると読み取り専用と明示でき、パフォーマンスも上がる。
+// 【AI任せでOK】@Transactional / @Service / @RequiredArgsConstructor の書き方
+// ============================================================
 import com.example.backend.dto.request.TagCreateRequest;
 import com.example.backend.dto.request.TagUpdateRequest;
 import com.example.backend.dto.response.DeleteResponse;

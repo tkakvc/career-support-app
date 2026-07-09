@@ -1,3 +1,15 @@
+// ============================================================
+// 【このファイル全体の方針】
+// 【面接で説明できるようにする】なぜ useMutation を使うか（useQuery との使い分け）
+//   → useQuery は「画面が表示されたときに自動でAPIを叩く」フック（GET 向け）。
+//     useMutation は「ボタン押下など任意のタイミングでAPIを叩く」フック（POST / PUT / DELETE 向け）。
+//     今回はフォーム送信時（任意タイミング）に POST を叩くので useMutation を使う。
+// 【面接で説明できるようにする】なぜ onSuccess で invalidateQueries を呼ぶか
+//   → POST 成功後にキャッシュが古くなるため「このキャッシュはもう無効」とマークする。
+//     すると画面に表示中のコンポーネントが自動で GET を叩き直して一覧を最新化する。
+//     Vue 2 で POST 後に手動で dispatch('fetchRecords') を呼んでいた処理が自動になる。
+// 【AI任せでOK】useMutation の型引数（<LearningRecord, Error, LearningRecordCreateRequest>）の書き方
+// ============================================================
 // 学習記録を1件作成し、一覧キャッシュを更新するフック
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 // useMutation は「POST / PUT / DELETE のAPIを叩く」フック。

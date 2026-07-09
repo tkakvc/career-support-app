@@ -1,5 +1,9 @@
 package com.example.backend.dto.response;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【AI任せでOK】レスポンス DTO のフィールド定義・@Getter / @Setter / @NoArgsConstructor / @AllArgsConstructor の Lombok 構文
+// ============================================================
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

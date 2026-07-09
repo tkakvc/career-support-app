@@ -1,5 +1,11 @@
 package com.example.backend;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【AI任せでOK】このファイルは開発用の初期データ投入ボイラープレート。覚えなくていい。
+//   → CommandLineRunner を実装すると Spring Boot 起動直後に run() が自動で呼ばれる。
+//   → 本番環境では Flyway などのマイグレーションツールで代替することが多い。
+// ============================================================
 import com.example.backend.entity.Tag;
 import com.example.backend.entity.User;
 import com.example.backend.repository.TagRepository;

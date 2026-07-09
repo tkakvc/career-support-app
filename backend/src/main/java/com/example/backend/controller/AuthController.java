@@ -1,5 +1,15 @@
 package com.example.backend.controller;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【面接で説明できるようにする】なぜ Controller / Service / Repository に分けるか（レイヤードアーキテクチャ）
+//   → Controller：HTTPの入出力を担当。URLとメソッドを対応させる。
+//     Service：ビジネスロジックを担当。「メールが重複していたら409」などの判断をする。
+//     Repository：DBアクセスを担当。SQLを書く（または JPA に生成させる）。
+//     各レイヤーが1つの責務に集中することで、テストが書きやすく変更に強い構造になる（単一責任の原則）。
+// 【AI任せでOK】@RestController / @RequestMapping / @PostMapping などのアノテーションの書き方
+// 【AI任せでOK】@RequiredArgsConstructor の Lombok 構文
+// ============================================================
 import com.example.backend.dto.request.LoginRequest;
 import com.example.backend.dto.request.SignupRequest;
 import com.example.backend.dto.response.AuthResponse;

@@ -1,5 +1,10 @@
 package com.example.backend.dto.response;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【AI任せでOK】レスポンス DTO のフィールド定義・@Getter / @Setter / @NoArgsConstructor の Lombok 構文
+//   → @Setter が必要な理由は既存コメントに書いてある通り（Jackson がセッターを使って値をセットするため）
+// ============================================================
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

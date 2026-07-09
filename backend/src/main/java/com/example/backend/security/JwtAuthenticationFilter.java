@@ -1,5 +1,33 @@
 package com.example.backend.security;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【面接で説明できるようにする】なぜ Filter で JWT を検証するか
+//   → Spring Security のフィルターチェーンは Controller の前に実行される。
+//     ここで JWT を検証して SecurityContext に userId をセットすることで、
+//     Controller が @AuthenticationPrincipal で userId を受け取れるようになる。
+//     各 Controller に認証チェックを書かなくていい（横断的関心事の分離）。
+// 【面接で説明できるようにする】なぜステートレスな JWT 認証を使うか
+//   → サーバーがセッションを保持しないため、サーバーを増やしても（スケールアウト）
+//     どのサーバーでも同じように JWT を検証できる。
+//     セッション方式ではサーバー間でセッション共有が必要になる。
+// 【AI任せでOK】OncePerRequestFilter の extends 構文・doFilterInternal の書き方
+// 【AI任せでOK】UsernamePasswordAuthenticationToken / SecurityContextHolder の使い方
+// 【理解する】filterChain.doFilter(request, response) の意味
+//   フィルターとは「Controller に届く前にリクエストを横取りして処理する部品」のこと。
+//   Spring Security は複数のフィルターを直列に並べていて、リクエストはそれを順番に通過する。
+//   このクラス（JwtAuthenticationFilter）もその1つ。
+//
+//   リクエストの流れ:
+//     ブラウザ
+//       → JwtAuthenticationFilter（このクラス）
+//       → 他のフィルター群（CSRFチェック・セッション管理など）
+//       → Controller
+//
+//   filterChain.doFilter() = 「自分の処理はここまで。次のフィルターに渡す」という命令。
+//   この1行を書かないと、リクエストがここで止まって Controller まで届かない。
+// 【AI任せでOK】filterChain.doFilter の引数の書き方（request と response をそのまま渡すだけ）
+// ============================================================
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

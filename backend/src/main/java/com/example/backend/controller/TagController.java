@@ -1,5 +1,12 @@
 package com.example.backend.controller;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【面接で説明できるようにする】なぜ Controller / Service / Repository に分けるか
+//   → 各レイヤーが単一の責務を持つことでテストしやすく変更に強い構造になる（単一責任の原則）。
+//     Controller はHTTPの入出力だけ、Service は「defaultタグは編集不可」などのビジネスルールだけを担当する。
+// 【AI任せでOK】@RestController / @RequestMapping / @RequiredArgsConstructor などのアノテーションの書き方
+// ============================================================
 import com.example.backend.dto.request.TagCreateRequest;
 import com.example.backend.dto.request.TagUpdateRequest;
 import com.example.backend.dto.response.DeleteResponse;

@@ -1,5 +1,16 @@
 package com.example.backend.entity;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【AI任せでOK】@Entity / @Table / @Column などの JPA アノテーションの書き方
+//   → @Entity は「このクラスが DB のテーブルと対応する」という宣言。
+//   → @Column の columnDefinition / updatable / nullable などの属性は覚えなくていい。
+//   → Lombok の @Builder / @Getter / @Setter / @NoArgsConstructor / @AllArgsConstructor は覚えなくていい。
+// 【面接で説明できるようにする】なぜ Entity クラスを作るか（JPA を使う理由）
+//   → JPA を使うと「テーブルとクラスを対応させる」ことで、SQL を書かずに
+//     Java のオブジェクト操作（save / findById / delete）だけで DB にアクセスできる。
+//     ただし、複雑なクエリ（JOIN・集計）は JPQL や @Query で書く必要がある。
+// ============================================================
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;

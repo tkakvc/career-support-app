@@ -1,5 +1,11 @@
 package com.example.backend.dto.request;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【AI任せでOK】DTO クラスのフィールド定義と @NotNull / @NotBlank / @Min / @Max / @Size などの書き方
+//   → LearningRecordCreateRequest と似た構造。ロジックは書かない。
+//   → Lombok の @Getter / @NoArgsConstructor は覚えなくていい。
+// ============================================================
 import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

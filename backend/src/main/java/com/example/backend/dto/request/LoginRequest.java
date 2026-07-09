@@ -1,5 +1,11 @@
 package com.example.backend.dto.request;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【AI任せでOK】DTO クラスのフィールド定義と @NotBlank / @Email などのバリデーションアノテーションの書き方
+//   → DTO は「リクエストのJSONをJavaオブジェクトに変換するだけ」のクラス。ロジックは書かない。
+//   → @Getter の Lombok 構文は覚えなくていい。
+// ============================================================
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;

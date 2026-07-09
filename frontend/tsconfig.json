@@ -1,23 +1,75 @@
 {
+  // ============================================================
+  // 【面接で説明できるようにする】
+  //
+  // Q: tsconfig.json は何のファイルか？
+  // A: TypeScript コンパイラへの設定ファイル。
+  //    「どの JavaScript バージョンに変換するか」「どのファイルを型チェックするか」
+  //    「パスエイリアスをどう解決するか」などを指定する。
+  //
+  // Q: strict: true は何をするか？
+  // A: 型チェックを厳しくするオプションをまとめて有効にする。
+  //    代表的な効果は「null かもしれない値を確認せずに使ったらコンパイルエラーにする」。
+  //    例: const name = user.name  // user が null の可能性があればエラー
+  //
+  // Q: paths の "@/*" は何のためにあるか？
+  // A: import のパスを短く書くためのエイリアス設定。
+  //    "@/store/authStore" と書くと "./src/store/authStore" として解釈される。
+  //    深くネストしたファイルから "../../.." のような相対パスを書かずに済む。
+  // ============================================================
   "compilerOptions": {
+    // 【抑えておく】TypeScript を変換する JavaScript のバージョン。
+    // ES2017 にすると async/await がそのまま使える。
     "target": "ES2017",
+
+    // 【AI任せでOK】使える型の定義ファイルを指定。dom = ブラウザの API（document など）が使える。
     "lib": ["dom", "dom.iterable", "esnext"],
+
+    // 【AI任せでOK】.js ファイルも TypeScript プロジェクトに混在させてよいという設定。
     "allowJs": true,
+
+    // 【AI任せでOK】node_modules 内の型定義ファイルの型エラーを無視する。
+    // ライブラリ側の型定義の不備でビルドが壊れるのを防ぐ。
     "skipLibCheck": true,
+
+    // 【面接で説明できるようにする】型チェックを厳しくする。
+    // null チェック漏れ・暗黙の any などをコンパイルエラーにする。
     "strict": true,
+
+    // 【抑えておく】型チェックだけ行い、JavaScript ファイルは出力しない。
+    // JavaScript への変換は Next.js（内部の Webpack）が担当するため。
     "noEmit": true,
+
+    // 【AI任せでOK】CommonJS（require）形式のライブラリを import で読めるようにする。
     "esModuleInterop": true,
+
+    // 【AI任せでOK】モジュール形式の指定。Next.js では esnext を使う。
     "module": "esnext",
+
+    // 【AI任せでOK】import のパス解決をバンドラー（Webpack）に合わせる設定。
     "moduleResolution": "bundler",
+
+    // 【AI任せでOK】import した JSON ファイルを型付きで使えるようにする。
     "resolveJsonModule": true,
+
+    // 【AI任せでOK】各ファイルを独立してコンパイルできるようにする（Next.js が必要とする設定）。
     "isolatedModules": true,
+
+    // 【AI任せでOK】JSX を React 17 以降の形式（import React 不要）で扱う設定。
     "jsx": "react-jsx",
+
+    // 【AI任せでOK】前回のビルド結果を保存して差分だけ再コンパイルする（ビルド高速化）。
     "incremental": true,
+
     "plugins": [
       {
         "name": "next"
       }
     ],
+
+    // 【面接で説明できるようにする】パスエイリアスの設定。
+    // "@/store/authStore" → "./src/store/authStore" として解釈される。
+    // 深いディレクトリからのインポートで "../../.." のような相対パスを避けられる。
     "paths": {
       "@/*": ["./src/*"]
     }

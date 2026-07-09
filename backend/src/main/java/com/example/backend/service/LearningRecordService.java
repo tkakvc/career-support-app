@@ -1,5 +1,19 @@
 package com.example.backend.service;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【面接で説明できるようにする】なぜ JPA / Specification を使うか
+//   → Specification を使うと「条件を and() で動的に積み上げる」書き方ができる。
+//     getLearningRecords() の if-else を見ると「検索条件がある場合だけ AND 条件を追加する」
+//     処理が1行ずつ書かれている。SQL 文字列を組み立てるより型安全で変更に強い。
+// 【面接で説明できるようにする】なぜ @Transactional(readOnly = true) を使うか
+//   → 読み取りだけのメソッドに readOnly を付けると Hibernate が最適化を行いパフォーマンスが上がる。
+//     また誤ってデータ変更処理が混入したときにエラーで気づける。
+// 【面接で説明できるようにする】なぜ Entity をそのまま返さず Response クラスに変換するか
+//   → Entity をそのまま JSON にすると JPA の内部情報（LAZY プロキシなど）でエラーが起きることがある。
+//     また、返す情報を明示的に制御でき、DBの設計変更がAPIに直結しない。
+// 【AI任せでOK】@Transactional / @Service / @RequiredArgsConstructor の書き方
+// ============================================================
 import com.example.backend.dto.request.LearningRecordCreateRequest;
 import com.example.backend.dto.request.LearningRecordSearchCriteria;
 import com.example.backend.dto.request.LearningRecordUpdateRequest;

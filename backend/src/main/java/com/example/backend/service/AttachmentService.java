@@ -1,5 +1,17 @@
 package com.example.backend.service;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【面接で説明できるようにする】なぜ Service に所有者チェックを書くか（アクセス制御の設計）
+//   → 「このユーザーがこの学習記録を所有しているか」はビジネスルールなので Service の責務。
+//     Controller に書くと全エンドポイントに重複するし、テストが書きにくくなる。
+//     private メソッド verifyOwnership() に切り出すことで DRY 原則（重複排除）を実現している。
+// 【面接で説明できるようにする】なぜ @Transactional を使うか
+//   → upload() でDB保存とファイル保存の2つの操作をする。ストレージ保存が失敗したとき、
+//     DB保存も取り消さないと「DBにはあるのにファイルは存在しない」という不整合が起きる。
+//     @Transactional は RuntimeException で自動ロールバックするので、この不整合を防げる。
+// 【AI任せでOK】@Transactional / @Service / @RequiredArgsConstructor の書き方
+// ============================================================
 import com.example.backend.dto.response.AttachmentDownload;
 import com.example.backend.dto.response.AttachmentResponse;
 import com.example.backend.entity.Attachment;

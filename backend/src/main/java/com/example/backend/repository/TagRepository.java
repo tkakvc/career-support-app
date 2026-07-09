@@ -1,5 +1,14 @@
 package com.example.backend.repository;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【面接で説明できるようにする】なぜ命名規則（findByNameAndCreatedBy）と @Query を使い分けるか
+//   → findByNameAndCreatedBy は「name と createdBy の完全一致」だけで、JOIN や OR が不要。
+//     命名規則だけで表現できるシンプルなクエリは命名規則で書く方がコードが短く意図が伝わりやすい。
+//     findVisibleTags は「type='default' OR (type='user' AND userId一致)」という OR 条件で
+//     命名規則では表現できないため @Query を使う。適材適所で使い分けることが大切。
+// 【AI任せでOK】@Query のテキストブロック（"""..."""）の書き方・@Param の使い方
+// ============================================================
 import com.example.backend.entity.Tag;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

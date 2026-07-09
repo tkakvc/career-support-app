@@ -1,5 +1,17 @@
 package com.example.backend.exception;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【面接で説明できるようにする】なぜ例外処理を各 Controller に書かず一か所にまとめるか
+//   → 各 Controller で try-catch を書くと、同じエラー処理が何十か所にも重複する。
+//     @RestControllerAdvice で全 Controller の例外をここで一括処理することで、
+//     エラーレスポンスの形式を統一でき、修正も1箇所で済む（DRY原則）。
+// 【面接で説明できるようにする】なぜ 500 エラーで ex.getMessage() を返さないか
+//   → 内部エラーの詳細（スタックトレース・クラス名・DBのテーブル名など）を返すと
+//     攻撃者にシステム内部の情報を与えることになる（セキュリティリスク）。
+//     詳細はサーバーのログに残し、外部には汎用メッセージだけ返すのがセキュリティの原則。
+// 【AI任せでOK】@RestControllerAdvice / @ExceptionHandler / @ResponseStatus の書き方
+// ============================================================
 import com.example.backend.dto.response.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

@@ -1,3 +1,13 @@
+// ============================================================
+// 【このファイル全体の方針】
+// 【AI任せでOK】このファイルはほぼ Next.js の定型コード（npx create-next-app を実行したときに自動生成される初期ファイル）
+// 【面接で説明できるようにする】なぜ layout.tsx に <Providers> を置くか
+//   → Next.js の layout.tsx はアプリ全体を囲む最上位コンポーネント。
+//     TanStack Query の QueryClientProvider はアプリ全体でキャッシュを共有するために
+//     最上位に置く必要があるため、layout.tsx の <body> の中に入れている。
+//     ここに置かないと、ページごとにキャッシュが分断されてデータが共有されない。
+// 【AI任せでOK】Geist フォントの設定・CSS変数名（--font-geist-sans など）の書き方
+// ============================================================
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";

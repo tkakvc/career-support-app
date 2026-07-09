@@ -1,5 +1,14 @@
 package com.example.backend.dto.response;
 
+// ============================================================
+// 【このファイル全体の方針】
+// 【AI任せでOK】レスポンス DTO のフィールド定義・Lombok の @Getter の書き方
+// 【面接で説明できるようにする】なぜ Entity（LearningRecord）をそのまま返さず Response クラスに変換するか
+//   → Entity には JPA の内部情報（プロキシオブジェクト・Lazy ローディング）が含まれており、
+//     そのまま JSON 変換するとエラーになることがある。
+//     また、フロントエンドに見せたくないフィールドを除外したり、形を変えて返したりしやすい。
+//     Entity と API レスポンスの形を疎結合にすることで、DBの設計変更がAPIに直結しない。
+// ============================================================
 import com.example.backend.entity.LearningRecord;
 import com.example.backend.entity.Tag;
 import lombok.Getter;
