@@ -39,6 +39,9 @@ class LearningRecordServiceTest {
     @Mock
     private TagRepository tagRepository;
 
+    @Mock
+    private AttachmentService attachmentService;
+
     @InjectMocks
     private LearningRecordService learningRecordService;
 

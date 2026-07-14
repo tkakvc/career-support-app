@@ -29,6 +29,7 @@ public class LearningRecordService {
 
     private final LearningRecordRepository learningRecordRepository;
     private final TagRepository tagRepository;
+    private final AttachmentService attachmentService;
 
     @Transactional(readOnly = true)
     public List<LearningRecordResponse> getLearningRecords(UUID userId, LearningRecordSearchCriteria criteria) {
@@ -116,6 +117,7 @@ public class LearningRecordService {
         if (!record.getUserId().equals(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "他のユーザーの学習記録は削除できません");
         }
+        attachmentService.deleteAllByLearningRecordId(id);
         learningRecordRepository.delete(record);
         return new DeleteResponse();
     }
