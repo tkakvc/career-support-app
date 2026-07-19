@@ -16,6 +16,25 @@ package com.example.backend.config;
 //     このアプリは Cookie を使わず Authorization ヘッダーで JWT を送るため、
 //     CSRF が成立しない。無効化することで不要な制約を取り除いている。
 // 【AI任せでOK】@EnableWebSecurity / http.build() などのボイラープレートな書き方
+// 【面接で説明できるようにする】なぜ /actuator/health だけ permitAll にしているか
+//   → 前提知識1：/actuator/health とは何か
+//     Spring Boot Actuator という標準機能が用意している「このアプリは今正常に動いているか」
+//     だけを返す専用URL。Actuator = 英語で「機械を作動させる装置」の意味。
+//   → 前提知識2：AWSのALB（ロードバランサー）は「ヘルスチェック」という仕組みを持つ
+//     ALBは裏で数十秒おきに、この /actuator/health へ自動でアクセスしにいく。
+//     200が返れば「このタスクは生きている」、200以外が返れば「壊れている」と判断し、
+//     壊れていると判断したタスクにはユーザーのリクエストを一切振り分けなくなる。
+//   → 何が起きていたか（実際にAWS CLIで確認した事実）
+//     ALBのヘルスチェックはJWTトークンを持たずに /actuator/health へアクセスする。
+//     一方この下の authorizeHttpRequests は「/api/auth/** と swagger 系以外は
+//     anyRequest().authenticated()」＝全部認証必須、という設定だった。
+//     そのため /actuator/health もJWT必須の対象に含まれてしまい、
+//     ALBのヘルスチェックがJWT無しでアクセス→403で拒否→ALBが
+//     「このタスクは壊れている(unhealthy)」と判断→そのタスクにトラフィックが来なくなる、
+//     という不具合が起きていた（aws elbv2 describe-target-health で確認）。
+//   → なぜ permitAll にしても安全か
+//     /actuator/health が返すのは「動いているかどうか」だけで、個人情報やDBの中身などの
+//     機密情報は一切含まれないため、認証なしで誰でも見られる状態にしても情報漏えいにならない。
 // ============================================================
 import com.example.backend.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
@@ -66,6 +85,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // /api/auth/** は認証不要（ログイン・サインアップはトークンなしで呼べる）
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/actuator/health").permitAll()  // ALBのヘルスチェック用に追加
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()  // 追加
                 // それ以外は認証必須
                 .anyRequest().authenticated())
