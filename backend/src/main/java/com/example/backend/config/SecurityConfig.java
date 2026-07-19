@@ -20,6 +20,9 @@ package com.example.backend.config;
 //   → 前提知識1：/actuator/health とは何か
 //     Spring Boot Actuator という標準機能が用意している「このアプリは今正常に動いているか」
 //     だけを返す専用URL。Actuator = 英語で「機械を作動させる装置」の意味。
+//     ★ build.gradle に spring-boot-starter-actuator を追加していないと、この機能自体が
+//       存在せず、/actuator/health は「存在しないURL」になる（実際にこれが原因で
+//       GlobalExceptionHandlerのcatch-allに拾われ500を返す不具合が起きた）。
 //   → 前提知識2：AWSのALB（ロードバランサー）は「ヘルスチェック」という仕組みを持つ
 //     ALBは裏で数十秒おきに、この /actuator/health へ自動でアクセスしにいく。
 //     200が返れば「このタスクは生きている」、200以外が返れば「壊れている」と判断し、

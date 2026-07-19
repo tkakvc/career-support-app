@@ -23,6 +23,9 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	// ALBのヘルスチェック（/actuator/health）用。これが無いと/actuator/healthは
+	// 存在しないURLになり、GlobalExceptionHandlerの catch-all に拾われて500を返してしまう
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-cache'
 	implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter:1.0.0-M6'
 	implementation 'com.github.ben-manes.caffeine:caffeine'
