@@ -15,21 +15,18 @@ import java.util.UUID;
 public class JwtTokenProvider {
 
     private final SecretKey secretKey;
-    private final long expirationSeconds;
+    private final long accessExpirationSeconds;
 
-    // application.yaml の app.jwt.secret / app.jwt.expiration を注入
-    // yamlから秘密鍵と有効期限を受け取り、署名用の鍵オブジェクトを作る
     public JwtTokenProvider(
             @Value("${app.jwt.secret}") String secret,
-            @Value("${app.jwt.expiration}") long expirationSeconds) {
+            @Value("${app.jwt.access-expiration}") long accessExpirationSeconds) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.expirationSeconds = expirationSeconds;
+        this.accessExpirationSeconds = accessExpirationSeconds;
     }
 
-    // userId を埋め込んだJWTを生成して返す
-    public String generateToken(UUID userId) {
+    public String generateAccessToken(UUID userId) {
         Date now = new Date();
-        Date expiry = new Date(now.getTime() + expirationSeconds * 1000);
+        Date expiry = new Date(now.getTime() + accessExpirationSeconds * 1000);
 
         return Jwts.builder()
                 .subject(userId.toString())
@@ -39,7 +36,10 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    // JWT から userId を取り出す
+    public long getAccessExpirationSeconds() {
+        return accessExpirationSeconds;
+    }
+
     public UUID extractUserId(String token) {
         String subject = Jwts.parser()
                 .verifyWith(secretKey)
@@ -50,7 +50,6 @@ public class JwtTokenProvider {
         return UUID.fromString(subject);
     }
 
-    // JWT の署名・有効期限を検証する。不正なら false を返す
     public boolean validateToken(String token) {
         try {
             Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token);
