@@ -4,6 +4,14 @@ spring:
     username: postgres
     password: password
 
+  # Redis 接続設定（リフレッシュトークンの保存先）。
+  # host/port は環境変数で上書きでき、未指定ならローカル(localhost:6379)を使う。
+  # 本番(ECS)では REDIS_HOST に ElastiCache のエンドポイントを渡す。
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -25,7 +33,10 @@ spring:
 app:
   jwt:
     secret: ${APP_JWT_SECRET}
-    expiration: 3600
+    # アクセストークンの有効期限（秒）。短命にして、盗まれても悪用できる時間を短くする。900秒=15分。
+    access-expiration: 900
+    # リフレッシュトークンの有効期限（秒）。長命だが Redis に保存して失効できるようにする。1209600秒=14日。
+    refresh-expiration: 1209600
   cors:
     allowed-origins: http://localhost:3000
 

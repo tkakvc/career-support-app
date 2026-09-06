@@ -15,6 +15,8 @@ java {
 
 repositories {
 	mavenCentral()
+	// spring-ai は正式リリース前の M6（マイルストーン版）のため、
+	// 通常の mavenCentral には無く、Spring 専用のマイルストーン用リポジトリが別途必要
 	maven { url 'https://repo.spring.io/milestone' }
 }
 
@@ -23,9 +25,18 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	// ALBのヘルスチェック（/actuator/health）用。これが無いと/actuator/healthは
+	// 存在しないURLになり、GlobalExceptionHandlerの catch-all に拾われて500を返してしまう
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+	// @Cacheable を使えるようにする土台（キャッシュの仕組み自体）
 	implementation 'org.springframework.boot:spring-boot-starter-cache'
+	// OpenAI API を呼び出すためのライブラリ（AiConfig.java の ChatClient が使う）
 	implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter:1.0.0-M6'
+	// キャッシュの実際の保存先（実装）。上の spring-boot-starter-cache とセットで使う。
+	// AiConfig.java の CaffeineCacheManager が、AI提案結果を24時間キャッシュするのに使っている
 	implementation 'com.github.ben-manes.caffeine:caffeine'
+
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'org.postgresql:postgresql'
 	annotationProcessor 'org.projectlombok:lombok'
@@ -33,14 +44,22 @@ dependencies {
 	testImplementation 'org.springframework.security:spring-security-test'
 	testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	// テスト専用のインメモリDB。testRuntimeOnly なので本番・ローカル開発では使われない。
+	// テスト実行時にPostgreSQLを別途起動しなくても済むようにするためのもの
 	testRuntimeOnly 'com.h2database:h2'
 	testAnnotationProcessor 'org.projectlombok:lombok'
+
+	// Redis クライアント。リフレッシュトークンを Redis に保存して失効管理するために使う。
+	// StringRedisTemplate 等が使えるようになる（本番は ElastiCache、ローカルは redis コンテナ/redis-server に接続）
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
 	// JWT生成・検証ライブラリ（jjwt）
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 
+	// Swagger UI（/swagger-ui.html）を自動生成するライブラリ。
+	// コントローラーのコードから、動くAPI一覧画面を自動で作ってくれる
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.8'
 }
 

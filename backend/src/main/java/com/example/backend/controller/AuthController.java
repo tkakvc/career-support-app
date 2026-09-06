@@ -2,16 +2,18 @@ package com.example.backend.controller;
 
 // ============================================================
 // 【このファイル全体の方針】
-// 【面接で説明できるようにする】なぜ Controller / Service / Repository に分けるか（レイヤードアーキテクチャ）
-//   → Controller：HTTPの入出力を担当。URLとメソッドを対応させる。
-//     Service：ビジネスロジックを担当。「メールが重複していたら409」などの判断をする。
-//     Repository：DBアクセスを担当。SQLを書く（または JPA に生成させる）。
-//     各レイヤーが1つの責務に集中することで、テストが書きやすく変更に強い構造になる（単一責任の原則）。
-// 【AI任せでOK】@RestController / @RequestMapping / @PostMapping などのアノテーションの書き方
-// 【AI任せでOK】@RequiredArgsConstructor の Lombok 構文
+// 認証エンドポイントの入口。方式変更で /refresh（再発行）と /logout（失効）を追加した。
+// これらは SecurityConfig で /api/auth/** が permitAll のため、アクセストークン無しで呼べる
+// （リフレッシュトークン自体を本文で受け取って認証するため）。
+//
+// 【面接で説明できるようにする】Controller / Service / Repository の役割分担（レイヤードアーキテクチャ）
+//   → Controller はHTTPの入出力だけ担当し、判断（トークン検証やDBアクセス）はServiceに委譲する。
+// 【AI任せでOK】@RestController / @PostMapping / @Valid / @RequestBody のアノテーション
 // ============================================================
 import com.example.backend.dto.request.LoginRequest;
+import com.example.backend.dto.request.RefreshRequest;
 import com.example.backend.dto.request.SignupRequest;
+import com.example.backend.dto.response.AccessTokenResponse;
 import com.example.backend.dto.response.AuthResponse;
 import com.example.backend.service.AuthService;
 import jakarta.validation.Valid;
@@ -21,26 +23,34 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
-// final フィールド(authService)だけを引数に取るコンストラクタをLombokが自動生成 → @Autowired 不要
 @RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
 
     @PostMapping("/signup")
-    // 正常終了時に 200 OK ではなく 201 Created を返す（RESTの慣習: 新規リソース作成=201）
+    // 新規リソース作成なので 201 Created を返す
     @ResponseStatus(HttpStatus.CREATED)
-    // @Valid: SignupRequest のフィールドに付いたバリデーション(@NotBlank等)を実行する
-    // @RequestBody: リクエストのJSON本文をSignupRequestオブジェクトに変換する
     public AuthResponse signup(@Valid @RequestBody SignupRequest request) {
-        String token = authService.signup(request);
-        return new AuthResponse(token);
+        // signup も2種類のトークンを返す（登録と同時にログイン状態になる）
+        return authService.signup(request);
     }
 
     @PostMapping("/login")
-    // @ResponseStatus 省略 → デフォルトの 200 OK が返る
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-        String token = authService.login(request);
-        return new AuthResponse(token);
+        return authService.login(request);
+    }
+
+    @PostMapping("/refresh")
+    // リフレッシュトークンを受け取り、新しいアクセストークンを返す
+    public AccessTokenResponse refresh(@Valid @RequestBody RefreshRequest request) {
+        return authService.refresh(request.getRefreshToken());
+    }
+
+    @PostMapping("/logout")
+    // リフレッシュトークンを失効させる。返す本文は無いので 204 No Content
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(@Valid @RequestBody RefreshRequest request) {
+        authService.logout(request.getRefreshToken());
     }
 }
