@@ -13,6 +13,7 @@ spring:
 app:
   jwt:
     secret: test-secret-value-for-unit-tests-do-not-use-in-production
-    expiration: 3600
+    access-expiration: 900
+    refresh-expiration: 1209600
   cors:
     allowed-origins: http://localhost:3000

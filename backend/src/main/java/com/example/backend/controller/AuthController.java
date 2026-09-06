@@ -1,7 +1,9 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.request.LoginRequest;
+import com.example.backend.dto.request.RefreshRequest;
 import com.example.backend.dto.request.SignupRequest;
+import com.example.backend.dto.response.AccessTokenResponse;
 import com.example.backend.dto.response.AuthResponse;
 import com.example.backend.service.AuthService;
 import jakarta.validation.Valid;
@@ -23,14 +25,25 @@ public class AuthController {
     // @Valid: SignupRequest のフィールドに付いたバリデーション(@NotBlank等)を実行する
     // @RequestBody: リクエストのJSON本文をSignupRequestオブジェクトに変換する
     public AuthResponse signup(@Valid @RequestBody SignupRequest request) {
-        String token = authService.signup(request);
-        return new AuthResponse(token);
+        return authService.signup(request);
     }
 
     @PostMapping("/login")
     // @ResponseStatus 省略 → デフォルトの 200 OK が返る
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-        String token = authService.login(request);
-        return new AuthResponse(token);
+        return authService.login(request);
+    }
+
+    @PostMapping("/refresh")
+    // リフレッシュトークンを受け取り、新しいアクセストークンを再発行する
+    public AccessTokenResponse refresh(@Valid @RequestBody RefreshRequest request) {
+        return authService.refresh(request.getRefreshToken());
+    }
+
+    @PostMapping("/logout")
+    // リフレッシュトークンを失効させる。返す本文が無いので 204 No Content
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(@Valid @RequestBody RefreshRequest request) {
+        authService.logout(request.getRefreshToken());
     }
 }
