@@ -4,6 +4,11 @@ spring:
     username: postgres
     password: password
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -25,7 +30,8 @@ spring:
 app:
   jwt:
     secret: ${APP_JWT_SECRET}
-    expiration: 3600
+    access-expiration: 900
+    refresh-expiration: 1209600
   cors:
     allowed-origins: http://localhost:3000
 
