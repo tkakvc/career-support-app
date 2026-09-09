@@ -89,6 +89,12 @@ JSONではなく、ファイルのバイナリデータをそのままレスポ�
 | Content-Disposition | `attachment; filename="spring-boot-memo.pdf"` | ブラウザに「保存ダイアログ」を表示させる指示 |
 | Content-Length | `102400` | ファイルサイズ（バイト） |
 
+**Content-Disposition の値について：**
+
+`Content-Disposition` はレスポンスボディ（中身）をブラウザにどう扱ってほしいかを伝えるヘッダー。値が `inline` だとタブの中にそのまま表示され、`attachment`（添付ファイル、の意味）だと画面には表示せず「名前を付けて保存」ダイアログが開く。
+
+`filename="..."` はその保存ダイアログにあらかじめ入力しておくファイル名。ダウンロードURL自体（`/attachments/{attachmentId}/download`）にはファイル名の情報が含まれないため、この値で明示的に伝える必要がある。
+
 ---
 
 ## DELETE /api/learning-records/{id}/attachments/{attachmentId}　添付ファイル削除API
