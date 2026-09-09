@@ -10,7 +10,6 @@
 | email | string | ○ | UNIQUE・最大255文字 | メールアドレス（ログイン識別子） |
 | passwordHash | string | ○ | BCryptハッシュ済み | パスワード（平文不可） |
 | displayName | string | ○ | 最大100文字 | 表示名 |
-| githubUsername | string | - | 最大100文字 | GitHubユーザー名（未設定時はnull） |
 | createdAt | string (ISO 8601) | - | 自動設定 | 作成日時 |
 | updatedAt | string (ISO 8601) | - | 自動更新 | 更新日時 |
 

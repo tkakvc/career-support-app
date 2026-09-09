@@ -79,7 +79,6 @@ users
 | email | VARCHAR(255) | UNIQUE, NOT NULL | メールアドレス |
 | password_hash | VARCHAR(255) | NOT NULL | ハッシュ済みパスワード |
 | display_name | VARCHAR(100) | NOT NULL | 表示名 |
-| github_username | VARCHAR(100) | - | GitHub ユーザー名 |
 | created_at | TIMESTAMP | NOT NULL | 作成日時 |
 | updated_at | TIMESTAMP | NOT NULL | 更新日時 |
 
@@ -92,7 +91,7 @@ users
 - 学習記録には複数のタグを付与可能
 - タグは検索や集計にも利用する
 
-タグの詳細なAPI仕様・データモデルは docs/learning-records/api/ 配下を参照
+タグの詳細なAPI仕様・データモデルは docs/tags/api/ を、学習記録の詳細は docs/learning-records/api/ を参照
 
 #### learning_records
 
@@ -113,6 +112,7 @@ users
 | name | VARCHAR(50) | NOT NULL | タグ名 |
 | type | VARCHAR(10) | NOT NULL | "default" or "user" |
 | created_by | UUID | FK(users.id), nullable | 作成者 ID（user タグのみ） |
+| created_at | TIMESTAMP | NOT NULL | 作成日時（タグ管理画面の作成順ソートに使用） |
 
 #### learning_record_tags（中間テーブル）
 
@@ -152,9 +152,24 @@ users
 | メソッド | パス | 説明 | 認証不要 |
 |---|---|---|---|
 | POST | /api/auth/signup | ユーザー登録 | ○ |
-| POST | /api/auth/login | ログイン・JWT 発行 | ○ |
+| POST | /api/auth/login | ログイン・アクセストークン＋リフレッシュトークン発行 | ○ |
+| POST | /api/auth/refresh | リフレッシュトークンでアクセストークンを再発行 | ○（リフレッシュトークンで認証） |
+| POST | /api/auth/logout | リフレッシュトークンを失効させる | ○（リフレッシュトークンで認証） |
 
-ログアウトは専用エンドポイントを持たない。JWT はステートレス（サーバー側にトークンを保持しない）なので、フロントエンドが保存している JWT を破棄するだけでログアウトが完了する。Redis 等でトークンの無効化リストを持つ方式も検討したが、個人開発規模でその管理コストを持つ必要性が薄いため、シンプルなステートレス構成を採用した。
+#### 認証方式：短命アクセストークン＋リフレッシュトークン（Redisで失効管理）
+
+- 当初はステートレスなJWT1本のみ（ログアウトはフロントがトークンを捨てるだけ）で設計していたが、「一度発行したトークンを有効期限まで失効できない（強制ログアウト・盗難時の無効化ができない）」という弱点があるため、一般的な**アクセストークン＋リフレッシュトークン方式**に変更した。
+- 仕組み
+  - アクセストークン：API認証に使うJWT。短命（15分）。ステートレスでサーバーに保存しない。毎リクエストの検証はこれまで通り署名検証のみで完結する
+  - リフレッシュトークン：アクセストークンを再発行するための鍵。長命（14日）。**Redis（ElastiCache）に保存**し、失効できるようにする
+- なぜリフレッシュトークンをRedisに置くか
+  - RedisはキーごとにTTL（有効期限）を設定でき、期限切れを自動削除できる。リフレッシュトークンの寿命管理と相性が良い
+  - ログアウト・強制失効は「該当リフレッシュトークンをRedisから削除する」だけで実現できる
+- 各エンドポイントの動作
+  - ログイン：アクセストークン＋リフレッシュトークンを発行し、リフレッシュトークンをRedisに保存（`refresh:{userId}:{tokenId}` → 有効、TTL14日）
+  - リフレッシュ：リフレッシュトークンがRedisに存在すれば、新しいアクセストークンを発行
+  - ログアウト：該当リフレッシュトークンをRedisから削除する。以後そのトークンでは再発行できなくなる
+- 即時失効について：アクセストークンは短命（15分）なので、ログアウト後も最大15分は技術的に有効なまま。これは一般的な妥協点として許容する。より厳密な即時失効が必要になれば、アクセストークンのjti拒否リスト（denylist）をRedisに持つ方式を追加できる（現時点では過剰と判断し採用しない）
 
 **POST /api/auth/login リクエスト例：**
 ```json
@@ -167,17 +182,37 @@ users
 **レスポンス例：**
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expiresIn": 3600
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresIn": 900,
+  "refreshToken": "d9f3...ランダムな文字列",
+  "refreshExpiresIn": 1209600
 }
 ```
 
-### 3.3 ユーザー API
+**POST /api/auth/refresh リクエスト例：**
+```json
+{
+  "refreshToken": "d9f3...ランダムな文字列"
+}
+```
+
+**レスポンス例：**
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...（新しいもの）",
+  "expiresIn": 900
+}
+```
+
+### 3.3 ユーザー API（設定画面 P08）
 
 | メソッド | パス | 説明 |
 |---|---|---|
 | GET | /api/users/me | ログインユーザー情報取得 |
-| PUT | /api/users/me | ユーザー情報更新 |
+| PATCH | /api/users/me | 表示名の変更 |
+| PUT | /api/users/me/password | パスワード変更（現在パスワード確認あり） |
+
+詳細は [settings/api/](settings/api/)（`overview.md` / `endpoints.md` / `model.md` / `request-response.md` / `error.md` / `usecase.md`）を参照。メールアドレス変更・2要素認証・退会はスコープ外（`settings/api/overview.md`）。
 
 ### 3.4 学習記録・タグ API
 
@@ -231,7 +266,7 @@ users
 **GET /api/learning-records/{id}/attachments/{attachmentId}/download：**
 
 ファイルのバイト列をレスポンスボディに含めて返す。  
-`Content-Disposition: attachment; filename="spring-boot-memo.pdf"` ヘッダーを付与することで、ブラウザに「保存ダイアログ」を表示させる。
+`Content-Disposition: attachment; filename="spring-boot-memo.pdf"` ヘッダーを付与することで、ブラウザに「保存ダイアログ」を表示させる（詳しくは request-response.md の「Content-Disposition の値について」）。
 
 **バリデーション：**
 
@@ -245,7 +280,10 @@ users
 
 | メソッド | パス | 説明 |
 |---|---|---|
-| POST | /api/ai/suggest | 学習提案生成 |
+| POST | /api/ai/suggest | 学習提案生成（結果はユーザー単位でキャッシュ） |
+| POST | /api/ai/decompose | 目標のタスク分解 |
+
+両エンドポイントとも JWT 必須・1ユーザー1日10回まで（超過で 429）。詳細は [ai/api/](ai/api/)、画面は [ai/screen/overview.md](ai/screen/overview.md) を参照。
 
 ---
 
@@ -290,16 +328,16 @@ users
 
 ### 5.1 画面一覧
 
-| # | 画面名 | パス | 説明 |
-|---|---|---|---|
-| P01 | ログイン | /login | JWT ログイン |
-| P02 | サインアップ | /signup | 新規登録 |
-| P03 | ダッシュボード | / | 各情報サマリ |
-| P04 | 学習記録一覧 | /records | 学習記録リスト |
-| P05 | 学習記録詳細・編集 | /records/{id} | 詳細・編集 |
-| P06 | タグ管理 | /tags | タグ一覧・作成・編集・削除 |
-| P07 | AI 提案 | /ai | AI 学習提案 |
-| P08 | 設定 | /settings | ユーザー設定 |
+| # | 画面名 | パス | 説明 | 詳細設計 |
+|---|---|---|---|---|
+| P01 | ログイン | /login | JWT ログイン | ― |
+| P02 | サインアップ | /signup | 新規登録 | ― |
+| P03 | ダッシュボード（学習記録一覧・検索） | /dashboard | 学習記録の一覧とキーワード・タグ・期間による絞り込み | [learning-records/screen/overview.md](learning-records/screen/overview.md) |
+| P04 | 学習記録 新規作成 | /records/new | 学習記録の作成 | 同上 |
+| P05 | 学習記録 詳細・編集 | /records/{id} | 詳細表示・編集・削除・ファイル添付 | 同上 |
+| P06 | タグ管理 | /tags | タグ一覧・作成・編集・削除 | [tags/screen/overview.md](tags/screen/overview.md) |
+| P07 | AI 提案 | /ai | AI による学習提案・タスク分解 | [ai/screen/overview.md](ai/screen/overview.md) |
+| P08 | 設定 | /settings | プロフィール表示・表示名変更・パスワード変更 | [settings/screen/overview.md](settings/screen/overview.md) |
 
 ### 5.2 共通レイアウト
 
@@ -327,13 +365,19 @@ users
 
 | サービス | 用途 | 備考 |
 |---|---|---|
-| ECS Fargate | フロントエンド・バックエンドのコンテナ実行 | サーバーレスコンテナ（EC2インスタンスの管理不要） |
+| ECS Fargate | フロントエンド・バックエンドのコンテナ実行 | サーバーレスコンテナ（EC2インスタンスの管理不要）。フロントエンド側は検討事項参照 |
 | ALB | リクエストの振り分け・HTTPS終端 | パスに応じてフロント/バックエンドのコンテナへルーティング |
 | CloudFront | CDN・静的アセット配信 | エッジキャッシュにより表示を高速化 |
 | ACM | HTTPS 証明書の発行・管理 | CloudFront / ALB に無料で証明書を紐付け |
 | RDS | PostgreSQL | db.t3.micro（無料枠） |
 | S3 | ファイル添付の保存先（画像・PDF 等） | ファイル添付機能で必須 |
 | Security Group | アクセス制御 | ALB は 443 のみ、ECS タスクは ALB からの通信のみ許可 |
+
+**検討事項：フロントエンドのECS Fargate運用について**
+
+- 現状`next.config.ts`は`output: "standalone"`（Node.jsサーバーとして起動する前提）だが、実際のページ（login/signup/dashboard/records/new/records/[id]）は全て`"use client"`で、`middleware.ts`・APIルート（`route.ts`）・`generateMetadata()`・サーバーアクションのいずれも未使用
+- SSR（サーバー側でのHTML生成）を実質使っていないため、`output: "export"`に変更すれば静的書き出しが可能で、フロントエンドはS3+CloudFrontで配信でき、フロント用のECS Fargateタスク・ALBのルーティングが不要になる
+- 未確認：`records/[id]`（可変URL）が`next build`で`out/`に問題なく出力されるか（実機確認が必要）
 
 ### 6.2 環境一覧
 

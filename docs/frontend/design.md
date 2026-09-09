@@ -1,13 +1,23 @@
 # フロントエンド設計書
 
+このファイルは全体方針（API一覧・状態管理・フォルダ構成）を扱う。画面ごとの詳細設計は各機能の `screen/` に置く。
+
+| 画面 | 詳細設計 |
+|---|---|
+| ダッシュボード（学習記録一覧・検索）／学習記録 詳細・編集／新規作成／ファイル添付 | [../learning-records/screen/overview.md](../learning-records/screen/overview.md) |
+| タグ管理 | [../tags/screen/overview.md](../tags/screen/overview.md) |
+| AI 提案 | [../ai/screen/overview.md](../ai/screen/overview.md) |
+| 設定 | [../settings/api/overview.md](../settings/api/overview.md)（API設計） |
+
 ---
 
-## 実装済みAPI一覧
+## 利用API一覧
 
 | メソッド | エンドポイント | 説明 |
 |---|---|---|
 | POST | /api/auth/signup | サインアップ |
 | POST | /api/auth/login | ログイン |
+| POST | /api/auth/logout | ログアウト（リフレッシュトークン失効） |
 | GET | /api/learning-records | 学習記録一覧（検索・フィルタ） |
 | POST | /api/learning-records | 学習記録作成 |
 | GET | /api/learning-records/{id} | 学習記録詳細 |
@@ -23,6 +33,9 @@
 | DELETE | /api/learning-records/{id}/attachments/{aid} | 添付ファイル削除 |
 | POST | /api/ai/suggest | AI学習提案 |
 | POST | /api/ai/decompose | AIタスク分解 |
+| GET | /api/users/me | プロフィール取得 |
+| PATCH | /api/users/me | 表示名の変更 |
+| PUT | /api/users/me/password | パスワード変更 |
 
 ---
 
@@ -32,11 +45,12 @@
 |---|---|---|
 | /login | ログイン | POST /api/auth/login |
 | /signup | サインアップ | POST /api/auth/signup |
-| /records | 学習記録一覧 | GET /api/learning-records, GET /api/tags |
+| /dashboard | ダッシュボード（学習記録一覧・検索） | GET /api/learning-records, GET /api/tags |
 | /records/new | 学習記録作成 | POST /api/learning-records, GET /api/tags |
 | /records/[id] | 学習記録詳細・編集 | GET/PUT/DELETE /api/learning-records/{id}, GET /api/tags, GET/POST/DELETE /api/learning-records/{id}/attachments, GET .../download |
 | /tags | タグ管理 | GET/POST/PUT/DELETE /api/tags |
-| /ai | AI機能 | POST /api/ai/suggest, POST /api/ai/decompose |
+| /ai | AI 提案 | POST /api/ai/suggest, POST /api/ai/decompose |
+| /settings | 設定 | GET/PATCH /api/users/me, PUT /api/users/me/password |
 
 ---
 
@@ -45,17 +59,18 @@
 ```
 app/
   layout.tsx                 ← 全画面共通レイアウト（Providers）
-  page.tsx                   ← / → /records にリダイレクト（ログイン済み）or /login にリダイレクト
+  page.tsx                   ← / → ログイン済みなら /dashboard、未ログインなら /login にリダイレクト
   (auth)/
-    layout.tsx               ← 認証ページ共通レイアウト（ログイン済みなら /records へ）
+    layout.tsx               ← 認証ページ共通レイアウト（ログイン済みなら /dashboard へ）
     login/
       page.tsx               ← ログインページ
     signup/
       page.tsx               ← サインアップページ
   (main)/
-    layout.tsx               ← メインページ共通レイアウト（未認証なら /login へ）
+    layout.tsx               ← メインページ共通レイアウト（未認証なら /login へ）・共通ヘッダーナビ
+    dashboard/
+      page.tsx               ← ダッシュボード（学習記録一覧・検索）
     records/
-      page.tsx               ← 学習記録一覧
       new/
         page.tsx             ← 学習記録作成
       [id]/
@@ -63,7 +78,9 @@ app/
     tags/
       page.tsx               ← タグ管理
     ai/
-      page.tsx               ← AI機能
+      page.tsx               ← AI 提案
+    settings/
+      page.tsx               ← 設定
 ```
 
 ---
