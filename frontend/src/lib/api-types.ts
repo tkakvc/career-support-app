@@ -42,6 +42,7 @@ export interface Tag {
   name: string;
   type: string;
   createdBy: string | null;
+  createdAt: string;
 }
 
 export interface TagCreateRequest {
