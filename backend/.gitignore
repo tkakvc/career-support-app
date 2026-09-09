@@ -38,3 +38,6 @@ out/
 
 ### Local storage ###
 uploads/
+
+### ローカル動作確認用の秘密鍵を含む設定（コミット禁止） ###
+src/main/resources/application-local.yaml
