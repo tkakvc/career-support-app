@@ -7,6 +7,8 @@ spring:
   # Redis 接続設定（リフレッシュトークンの保存先）。
   # host/port は環境変数で上書きでき、未指定ならローカル(localhost:6379)を使う。
   # 本番(ECS)では REDIS_HOST に ElastiCache のエンドポイントを渡す。
+  #   REDIS_HOST = career-support-redis.nmf9pa.0001.apne1.cache.amazonaws.com  （port 6379）
+  #   ※ ElastiCache を destroy→再作成するとアドレスが変わるので、その場合は更新する。
   data:
     redis:
       host: ${REDIS_HOST:localhost}
