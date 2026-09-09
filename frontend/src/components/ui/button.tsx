@@ -1,3 +1,10 @@
+// ============================================================
+// shadcn/ui が自動生成するボイラープレート。
+// なぜ cva（class-variance-authority）を使うか
+//   → variant（見た目の種類：primary / outline など）と size を組み合わせた
+//     クラス名を動的に生成できるライブラリ。
+//     条件分岐で className を手書きすると複雑になるが、cva を使うと宣言的に書ける。
+// ============================================================
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
