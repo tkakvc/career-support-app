@@ -17,6 +17,10 @@
 **例外フロー:**
 - 認証トークン不正 → 401
 
+**受け入れ基準:**
+- WHEN ログイン済みユーザーがタグ一覧を取得したとき THE SYSTEM SHALL default タグ全件と、そのユーザーが作成した user タグを返す
+- IF 認証トークンが不正または未送信のとき THEN THE SYSTEM SHALL 401 を返す
+
 ---
 
 ## UC-07　タグを作成する
@@ -33,6 +37,12 @@
 - 同じユーザーが同名タグをすでに持っている → 409
 - `name` が空または50文字超 → 400
 - 認証トークン不正 → 401
+
+**受け入れ基準:**
+- WHEN ユーザーが1〜50文字の未使用のタグ名を送信したとき THE SYSTEM SHALL type: "user"、createdBy: そのユーザーIDのタグを作成し、作成したタグを返す
+- IF 送信したタグ名がそのユーザーの既存タグ名と重複するとき THEN THE SYSTEM SHALL 409 を返し、タグを作成しない
+- IF タグ名が空または50文字を超えるとき THEN THE SYSTEM SHALL 400 を返す
+- IF 認証トークンが不正のとき THEN THE SYSTEM SHALL 401 を返す
 
 ---
 
@@ -53,6 +63,14 @@
 - 同名タグがすでに存在する → 409
 - 認証トークン不正 → 401
 
+**受け入れ基準:**
+- WHEN ユーザーが自分の作成した user タグのIDと新しいタグ名を送信したとき THE SYSTEM SHALL タグ名を更新し、更新後のタグを返す
+- IF 対象タグが default タグのとき THEN THE SYSTEM SHALL 403 を返し、更新しない
+- IF 対象タグが他ユーザーが作成した user タグのとき THEN THE SYSTEM SHALL 403 を返す
+- IF 対象タグIDが存在しないとき THEN THE SYSTEM SHALL 404 を返す
+- IF 新しいタグ名がそのユーザーの既存タグ名と重複するとき THEN THE SYSTEM SHALL 409 を返す
+- IF 認証トークンが不正のとき THEN THE SYSTEM SHALL 401 を返す
+
 ---
 
 ## UC-09　タグを削除する
@@ -71,3 +89,10 @@
 - 他ユーザーが作成したタグを指定 → 403
 - 存在しないIDを指定 → 404
 - 認証トークン不正 → 401
+
+**受け入れ基準:**
+- WHEN ユーザーが自分の作成した user タグのIDを指定して削除したとき THE SYSTEM SHALL タグを削除し、紐づいていた学習記録のタグ紐付けのみを解除する（学習記録自体は削除しない）
+- IF 対象タグが default タグのとき THEN THE SYSTEM SHALL 403 を返し、削除しない
+- IF 対象タグが他ユーザーが作成した user タグのとき THEN THE SYSTEM SHALL 403 を返す
+- IF 対象タグIDが存在しないとき THEN THE SYSTEM SHALL 404 を返す
+- IF 認証トークンが不正のとき THEN THE SYSTEM SHALL 401 を返す
