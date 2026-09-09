@@ -76,3 +76,64 @@
 - 存在しない学習記録IDまたは添付ファイルIDを指定 → 404
 - 他ユーザーの学習記録IDを指定 → 403
 - 認証トークン不正 → 401
+
+---
+
+## 動作確認手順（ローカル環境）
+
+UC-01〜UC-04 を curl で一通り確認する手順。テストユーザーは `DataInitializer` で作成済み。
+
+**1. DB を起動する**
+```bash
+docker run -d --name career-app-db -e POSTGRES_DB=career_app -e POSTGRES_PASSWORD=password -p 5432:5432 postgres:16
+```
+
+**2. バックエンドを起動する**
+```bash
+cd backend
+APP_JWT_SECRET=（32文字以上の適当な文字列） OPENAI_API_KEY=dummy ./gradlew bootRun
+```
+
+**3. ログインしてトークンを取得する**
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}'
+```
+レスポンスの `token` を以降で使う。
+
+**4. 学習記録を1件作成する**（添付先が必要なため）
+```bash
+curl -X POST http://localhost:8080/api/learning-records \
+  -H "Authorization: Bearer トークン" \
+  -H "Content-Type: application/json" \
+  -d '{"date":"2026-07-10","content":"テスト","duration":30}'
+```
+レスポンスの `id` を以降で使う。
+
+**5. アップロード（UC-01）**
+```bash
+curl -X POST http://localhost:8080/api/learning-records/レコードID/attachments \
+  -H "Authorization: Bearer トークン" \
+  -F "file=@/path/to/test.txt"
+```
+レスポンスの `id`（添付ファイルID）を以降で使う。
+
+**6. 一覧取得（UC-02）**
+```bash
+curl -H "Authorization: Bearer トークン" \
+  http://localhost:8080/api/learning-records/レコードID/attachments
+```
+
+**7. ダウンロード（UC-03）**
+```bash
+curl -H "Authorization: Bearer トークン" \
+  http://localhost:8080/api/learning-records/レコードID/attachments/添付ファイルID/download \
+  -o downloaded.txt
+```
+
+**8. 削除（UC-04）**
+```bash
+curl -X DELETE -H "Authorization: Bearer トークン" \
+  http://localhost:8080/api/learning-records/レコードID/attachments/添付ファイルID
+```
