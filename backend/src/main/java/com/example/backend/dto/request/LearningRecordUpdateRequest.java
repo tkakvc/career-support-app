@@ -31,7 +31,7 @@ public class LearningRecordUpdateRequest {
     @Max(value = 1440, message = "学習時間は1440分以内を指定してください")
     private Integer duration;
 
-    // null のとき既存タグを維持。空配列のとき全タグ削除。最大10件。
+    // 送られた内容でタグ紐付けを全置き換えする。null・空配列のどちらも「タグなし」扱い。最大10件。
     @Size(max = 10, message = "タグは10件以内で指定してください")
     private List<UUID> tagIds;
 }
