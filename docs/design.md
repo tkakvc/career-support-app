@@ -79,7 +79,6 @@ users
 | email | VARCHAR(255) | UNIQUE, NOT NULL | メールアドレス |
 | password_hash | VARCHAR(255) | NOT NULL | ハッシュ済みパスワード |
 | display_name | VARCHAR(100) | NOT NULL | 表示名 |
-| github_username | VARCHAR(100) | - | GitHub ユーザー名 |
 | created_at | TIMESTAMP | NOT NULL | 作成日時 |
 | updated_at | TIMESTAMP | NOT NULL | 更新日時 |
 
@@ -205,12 +204,15 @@ users
 }
 ```
 
-### 3.3 ユーザー API
+### 3.3 ユーザー API（設定画面 P08）
 
 | メソッド | パス | 説明 |
 |---|---|---|
 | GET | /api/users/me | ログインユーザー情報取得 |
-| PUT | /api/users/me | ユーザー情報更新 |
+| PATCH | /api/users/me | 表示名の変更 |
+| PUT | /api/users/me/password | パスワード変更（現在パスワード確認あり） |
+
+詳細は [settings/api/](settings/api/)（`overview.md` / `endpoints.md` / `model.md` / `request-response.md` / `error.md` / `usecase.md`）を参照。メールアドレス変更・2要素認証・退会はスコープ外（`settings/api/overview.md`）。
 
 ### 3.4 学習記録・タグ API
 
@@ -278,7 +280,10 @@ users
 
 | メソッド | パス | 説明 |
 |---|---|---|
-| POST | /api/ai/suggest | 学習提案生成 |
+| POST | /api/ai/suggest | 学習提案生成（結果はユーザー単位でキャッシュ） |
+| POST | /api/ai/decompose | 目標のタスク分解 |
+
+両エンドポイントとも JWT 必須・1ユーザー1日10回まで（超過で 429）。詳細は [ai/api/](ai/api/)、画面は [ai/screen/overview.md](ai/screen/overview.md) を参照。
 
 ---
 
@@ -323,16 +328,16 @@ users
 
 ### 5.1 画面一覧
 
-| # | 画面名 | パス | 説明 |
-|---|---|---|---|
-| P01 | ログイン | /login | JWT ログイン |
-| P02 | サインアップ | /signup | 新規登録 |
-| P03 | ダッシュボード | / | 各情報サマリ |
-| P04 | 学習記録一覧 | /records | 学習記録リスト |
-| P05 | 学習記録詳細・編集 | /records/{id} | 詳細・編集 |
-| P06 | タグ管理 | /tags | タグ一覧・作成・編集・削除 |
-| P07 | AI 提案 | /ai | AI 学習提案 |
-| P08 | 設定 | /settings | ユーザー設定 |
+| # | 画面名 | パス | 説明 | 詳細設計 |
+|---|---|---|---|---|
+| P01 | ログイン | /login | JWT ログイン | ― |
+| P02 | サインアップ | /signup | 新規登録 | ― |
+| P03 | ダッシュボード（学習記録一覧・検索） | /dashboard | 学習記録の一覧とキーワード・タグ・期間による絞り込み | [learning-records/screen/overview.md](learning-records/screen/overview.md) |
+| P04 | 学習記録 新規作成 | /records/new | 学習記録の作成 | 同上 |
+| P05 | 学習記録 詳細・編集 | /records/{id} | 詳細表示・編集・削除・ファイル添付 | 同上 |
+| P06 | タグ管理 | /tags | タグ一覧・作成・編集・削除 | [tags/screen/overview.md](tags/screen/overview.md) |
+| P07 | AI 提案 | /ai | AI による学習提案・タスク分解 | [ai/screen/overview.md](ai/screen/overview.md) |
+| P08 | 設定 | /settings | プロフィール表示・表示名変更・パスワード変更 | [settings/screen/overview.md](settings/screen/overview.md) |
 
 ### 5.2 共通レイアウト
 
