@@ -1,0 +1,8 @@
+app:
+  jwt:
+    secret: 32文字以上の適当な文字列に置き換える
+
+spring:
+  ai:
+    openai:
+      api-key: 実際のAPIキー（AI機能を試さないなら dummy でOK）
