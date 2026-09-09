@@ -97,7 +97,7 @@ export default function LoginPage() {
     try {
       // ▼ POST /api/auth/login を呼ぶ
       // api は lib/api.ts で作った axios インスタンス。
-      // レスポンスの型は AuthResponse（{ token: string }）。
+      // レスポンスの型は AuthResponse（{ accessToken, expiresIn, refreshToken, refreshExpiresIn }）。
       const response = await api.post<AuthResponse>("/auth/login", {
         email: data.email,
         password: data.password,
@@ -142,12 +142,11 @@ export default function LoginPage() {
       //   このアプリでは「CSRF が構造的に起きない localStorage を選び、
       //   XSS を混入させないことを React の仕組みで担保する」という判断をしている。
       //
-      // ▼ ログイン成功：トークンを Zustand に保存する
-      // AuthResponse には token しか入っていないので、userId と displayName は email から仮設定する。
-      // バックエンドがユーザー情報を返す API を持っていれば、そちらを呼んで取得するのが正しい。
-      // ここでは token だけを使い、userId・displayName は暫定で email を使う。
-      const { token } = response.data
-      setAuth(token, "", data.email)
+      // ▼ ログイン成功：アクセストークン・リフレッシュトークンを Zustand に保存する
+      // AuthResponse は { accessToken, expiresIn, refreshToken, refreshExpiresIn }。
+      // userId と displayName を返すユーザー情報APIはまだ無いので、暫定で email を使う。
+      const { accessToken, refreshToken } = response.data
+      setAuth(accessToken, refreshToken, "", data.email)
 
       // ▼ /dashboard にリダイレクト
       router.push("/dashboard")

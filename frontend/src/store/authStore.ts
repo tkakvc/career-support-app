@@ -8,6 +8,10 @@
 // 【面接で説明できるようにする】なぜ persist で localStorage に保存するか
 //   → persist なしだと、ページをリロードするたびに token が null に戻りログアウト状態になる。
 //     localStorage に保存することで、ブラウザを閉じても再訪問時にトークンを復元できる。
+// 【面接で説明できるようにする】なぜ accessToken と refreshToken を分けて持つか
+//   → バックエンドがリフレッシュトークン方式（アクセストークン=15分の短命JWT、
+//     リフレッシュトークン=14日・Redisで失効管理）に対応したため。
+//     accessTokenは毎リクエストの認証に使い、refreshTokenはaccessToken切れ時の再発行にのみ使う。
 // 【AI任せでOK】create<AuthState>()() の二重括弧の構文・persist の書き方
 // ============================================================
 import { create } from "zustand";
@@ -20,15 +24,20 @@ import { persist } from "zustand/middleware";
 // Zustand は全部この1つの interface にまとめて書く。
 interface AuthState {
   // --- 値（Vuex の state に相当） ---
-  token: string | null;       // JWT トークン。null = 未ログイン。string = ログイン済み
+  accessToken: string | null;  // 短命JWT（15分）。毎リクエストの認証に使う。null = 未ログイン
+  refreshToken: string | null; // 長命トークン（14日）。accessToken切れ時の再発行にのみ使う
   userId: string | null;      // ログイン中ユーザーの ID。null = 未ログイン
   displayName: string | null; // ログイン中ユーザーの表示名。null = 未ログイン
 
   // --- アクション（Vuex の mutations に相当） ---
   // Zustand に mutations という概念はなく、アクションから直接 set() で値を書き換える。
-  setAuth: (token: string, userId: string, displayName: string) => void;
-  // ↑ setAuth は「引数を3つ受け取って、戻り値なし（void）の関数」という型。
-  //   ログイン成功後に呼ぶ。token・userId・displayName を一括でストアにセットする。
+  setAuth: (accessToken: string, refreshToken: string, userId: string, displayName: string) => void;
+  // ↑ setAuth は「引数を4つ受け取って、戻り値なし（void）の関数」という型。
+  //   ログイン成功後に呼ぶ。accessToken・refreshToken・userId・displayName を一括でストアにセットする。
+
+  // ▼ setAccessToken：/refresh でアクセストークンだけを更新するとき用
+  // refreshToken・userId・displayName は変えず、accessToken だけ書き換える。
+  setAccessToken: (accessToken: string) => void;
 
   clearAuth: () => void;
   // ↑ clearAuth は「引数なし・戻り値なし（void）の関数」という型。
@@ -48,20 +57,23 @@ export const useAuthStore = create<AuthState>()(
     // Vuex で言うと commit に近い。ただし mutation の名前を指定する必要はなく、直接値を渡す。
     (set) => ({
       // --- 初期値（アプリ起動直後・未ログイン状態） ---
-      token: null,
+      accessToken: null,
+      refreshToken: null,
       userId: null,
       displayName: null,
 
       // ▼ setAuth：ログイン成功後に呼ぶ
-      // set({ token, userId, displayName }) は set({ token: token, userId: userId, displayName: displayName }) の省略形。
-      // ストアの token・userId・displayName がこの値に書き換わり、
-      // useAuthStore を使っている全コンポーネントが自動で再レンダリングされる。
-      setAuth: (token, userId, displayName) => set({ token, userId, displayName }),
+      setAuth: (accessToken, refreshToken, userId, displayName) =>
+        set({ accessToken, refreshToken, userId, displayName }),
+
+      // ▼ setAccessToken：/refresh 成功後に呼ぶ（refreshToken等は変えない）
+      setAccessToken: (accessToken) => set({ accessToken }),
 
       // ▼ clearAuth：ログアウト時に呼ぶ
       // 全ての値を null に戻す = 未ログイン状態に戻す。
       // localStorage からも自動で削除される（persist がやってくれる）。
-      clearAuth: () => set({ token: null, userId: null, displayName: null }),
+      clearAuth: () =>
+        set({ accessToken: null, refreshToken: null, userId: null, displayName: null }),
     }),
     {
       // ▼ name：localStorage に保存するときのキー名

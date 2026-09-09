@@ -61,8 +61,19 @@ export interface Attachment {
   createdAt: string;
 }
 
+// バックエンドがリフレッシュトークン方式（アクセストークン+リフレッシュトークン）に対応したため、
+// 昔の { token: string } から4フィールドに変わっている（backend/AuthResponse.java と一致させる）。
 export interface AuthResponse {
-  token: string;
+  accessToken: string;
+  expiresIn: number; // アクセストークンの有効秒数（900 = 15分）
+  refreshToken: string;
+  refreshExpiresIn: number; // リフレッシュトークンの有効秒数（1209600 = 14日）
+}
+
+// POST /api/auth/refresh のレスポンス（アクセストークンだけを新しく発行する）
+export interface AccessTokenResponse {
+  accessToken: string;
+  expiresIn: number;
 }
 
 export interface LoginRequest {
