@@ -99,6 +99,12 @@ public class AttachmentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "添付ファイルは1件の学習記録につき10ファイルまでです");
         }
 
+        // 【file.getOriginalFilename() とは】
+        //   アップロードした人のパソコン上での元のファイル名を取り出すメソッド。
+        //   例えば "spring-boot-memo.pdf" を選択してアップロードした場合、このメソッドは "spring-boot-memo.pdf" を返す。
+        //   ここで取り出した名前は storageKey の組み立てと DB の fileName に使われ、
+        //   最終的にダウンロード時の Content-Disposition の filename としてそのままブラウザに渡る。
+
         // DB 保存より前に attachmentId を確定させて storageKey を組み立てる（DB 書き込みを1回で済ませるため）
         UUID attachmentId = UUID.randomUUID();
         String storageKey = buildStorageKey(userId, attachmentId, file.getOriginalFilename());

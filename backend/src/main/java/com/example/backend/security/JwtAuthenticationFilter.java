@@ -7,6 +7,21 @@ package com.example.backend.security;
 //     ここで JWT を検証して SecurityContext に userId をセットすることで、
 //     Controller が @AuthenticationPrincipal で userId を受け取れるようになる。
 //     各 Controller に認証チェックを書かなくていい（横断的関心事の分離）。
+//     ★ @AuthenticationPrincipal とは：
+//       Principal は英語で「本人・主体」の意味。Spring Securityでは
+//       「今のリクエストが誰のものか」を表す値のことをprincipalと呼ぶ。
+//       Controllerの引数にこのアノテーションを付けると、下の流れでセットされたprincipalが
+//       そのまま渡ってくる（Controller側はJWTの存在を一切意識しなくてよい）。
+//
+//       ① クライアントが Authorization: Bearer <JWT> を送る
+//       ② extractToken() でヘッダーからJWT文字列だけを取り出す（77-83行目）
+//       ③ jwtTokenProvider.extractUserId(token) でJWTを復号しuserId(UUID)を取り出す（60行目）
+//       ④ new UsernamePasswordAuthenticationToken(userId, null, List.of())（65-66行目）
+//          → この第1引数が、Spring Securityの用語でまさに「principal」
+//       ⑤ SecurityContextHolder.getContext().setAuthentication(authentication)（69行目）
+//          → このリクエスト専用の置き場に、④で作った認証情報をセットする
+//       ⑥ Controllerの @AuthenticationPrincipal UUID userId が、
+//          ⑤の置き場からprincipal（＝userId）を取り出して自動で渡してくれる
 // 【面接で説明できるようにする】なぜステートレスな JWT 認証を使うか
 //   → サーバーがセッションを保持しないため、サーバーを増やしても（スケールアウト）
 //     どのサーバーでも同じように JWT を検証できる。

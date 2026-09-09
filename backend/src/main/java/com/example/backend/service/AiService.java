@@ -236,6 +236,27 @@ public class AiService {
     //   複数リクエストが同時にカウントを更新すると数が狂うため、排他制御している。
     //   ※ 覚える必要はない。「同時アクセスを安全に処理するためのキーワード」くらいでOK。
     //
+    // 【computeIfAbsent とは】
+    //   compute（計算する）+ if absent（存在しないなら）＝「キーが存在しないときだけ計算して登録する」メソッド。
+    //
+    //   requestLog.computeIfAbsent(userId, k -> new ArrayList<>()) の動き：
+    //     ・userId が requestLog に既にあれば → そのまま既存の List<Instant> を返す（k -> new ArrayList<>() は呼ばれない）
+    //     ・userId がまだなければ            → k -> new ArrayList<>() を実行して空リストを作り、
+    //                                            requestLog に userId → 空リスト を登録してから、その空リストを返す
+    //
+    //   例：requestLog = { userA -> [09:00, 10:00] } のとき
+    //     computeIfAbsent(userA, ...) → 既存の [09:00, 10:00] がそのまま返る
+    //     computeIfAbsent(userB, ...) → requestLog に userB -> [] が追加され、[] が返る
+    //
+    //   if 文なしで書くと以下と同じ：
+    //     List<Instant> timestamps;
+    //     if (requestLog.containsKey(userId)) {
+    //         timestamps = requestLog.get(userId);
+    //     } else {
+    //         timestamps = new ArrayList<>();
+    //         requestLog.put(userId, timestamps);
+    //     }
+    //
     private void checkRateLimit(UUID userId) {
         Instant oneDayAgo = Instant.now().minus(24, ChronoUnit.HOURS);
         List<Instant> timestamps = requestLog.computeIfAbsent(userId, k -> new ArrayList<>());
@@ -317,11 +338,28 @@ public class AiService {
     //   そのまま JSON としてパースすると失敗するため、{ ... } 部分だけ抜き出す。
     //
     // 【Pattern.compile("\\{.*\\}", Pattern.DOTALL) とは】
-    //   \\{  → { にマッチ（{ は正規表現の特殊文字なので \\ でエスケープ）
-    //   .*   → 任意の文字列（何文字でもOK）
-    //   \\}  → } にマッチ
-    //   Pattern.DOTALL → . が改行文字にもマッチするようにするオプション
-    //   ※ 正規表現の詳細は覚える必要はない。「{}の中身を取り出してる」くらいでOK。
+    //   3つのパーツに分けて読む。
+    //
+    //   ① \\{ 、\\} → ただの文字としての { と } にマッチする
+    //      正規表現の世界では { は「繰り返し回数の指定」に使う特殊文字（例: a{3} は "aaa" にマッチ）。
+    //      特殊文字じゃなく「ただの文字の {」として扱いたいときは \ を前に置く（エスケープ）。
+    //      さらに Java の文字列リテラルの中では \ 自体も特殊文字なので、\ を書くには \\ と2つ並べる。
+    //      → 結果、Java コード上の "\\{" は、正規表現エンジンには \{ の2文字として渡り、「{ という1文字にマッチ」と解釈される。
+    //
+    //   ② .*  → 任意の文字が0文字以上（greedy = できるだけ多く飲み込む）
+    //      "" にも "abc" にも "{...}を含む長い文字列" にもマッチする。
+    //      ただし普通の . は改行文字 \n にはマッチしない、という制限がある。
+    //
+    //   ③ Pattern.DOTALL → ②の制限を解除して、. が \n にもマッチするようにするオプション。
+    //      JSON の値の中に改行が含まれる場合（例: "content": "1行目\n2行目"）でも途切れずマッチできるようにするため。
+    //
+    //   具体例：raw = "以下がタスクです：{\"tasks\": [\"技術書を読む\", \"サンプルアプリを作る\"]}" のとき
+    //     1. \\{ が最初の { （"：" の直後）にマッチする
+    //     2. .* が greedy なので、まず残り全部を飲み込もうとする
+    //     3. \\} を満たせる位置まで後ろから戻っていき、文字列末尾の } で確定する
+    //     → matcher.group() は "{\"tasks\": [\"技術書を読む\", \"サンプルアプリを作る\"]}" になる
+    //       （最初の { の前にある「以下がタスクです：」は含まれない）
+    //   ※ 正規表現の細かい書き方は覚える必要はない。「最初の { から最後の } までを丸ごと抜き出している」くらいでOK。
     //
     // 【objectMapper.readValue(json, type) とは】
     //   JSON 文字列を指定した Java クラスのオブジェクトに変換するメソッド。
