@@ -11,7 +11,9 @@ package com.example.backend.entity;
 // ============================================================
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -71,4 +73,9 @@ public class Tag {
     // Long ではなく UUID（ラッパークラス）を使う理由: default タグは作成者が存在しないため null を許容する必要があるから。
     @Column(name = "created_by", columnDefinition = "uuid")
     private UUID createdBy;
+
+    // タグ管理画面の「作成日」列でのソートに使う。INSERT時にHibernateが自動で現在日時をセットする。
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 }

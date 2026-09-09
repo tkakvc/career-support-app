@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -77,9 +78,14 @@ class TagServiceTest {
         @Test
         void リポジトリが返したタグをTagResponseに変換して返す() {
             // given
+            // createdAt はタグ管理画面の「作成日」列ソートに使うフィールドなので、
+            // Entity → TagResponse への変換で欠落しないことも合わせて確認する
+            LocalDateTime createdAt = LocalDateTime.of(2026, 5, 20, 9, 15);
+            Tag userTag = buildUserTag(UUID.randomUUID(), "MyTag", userId);
+            userTag.setCreatedAt(createdAt);
             List<Tag> tags = List.of(
                     buildDefaultTag(UUID.randomUUID(), "Java"),
-                    buildUserTag(UUID.randomUUID(), "MyTag", userId)
+                    userTag
             );
             given(tagRepository.findVisibleTags(userId)).willReturn(tags);
 
@@ -91,6 +97,7 @@ class TagServiceTest {
             assertThat(result).hasSize(2);
             assertThat(result.get(0).getName()).isEqualTo("Java");
             assertThat(result.get(1).getName()).isEqualTo("MyTag");
+            assertThat(result.get(1).getCreatedAt()).isEqualTo(createdAt);
         }
     }
 
