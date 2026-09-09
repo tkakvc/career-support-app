@@ -218,7 +218,8 @@ class LearningRecordServiceTest {
             given(request.getDate()).willReturn(LocalDate.of(2024, 6, 1));
             given(request.getContent()).willReturn("更新後の内容");
             given(request.getDuration()).willReturn(90);
-            given(request.getTagIds()).willReturn(null); // null のとき既存タグを維持
+            given(request.getTagIds()).willReturn(null); // null は「タグなし」扱い
+            given(tagRepository.findAllById(any())).willReturn(List.of());
 
             LearningRecord saved = LearningRecord.builder()
                     .id(recordId)
@@ -265,9 +266,9 @@ class LearningRecordServiceTest {
         }
 
         @Test
-        void tagIdsがnullのとき既存タグを維持しtagRepositoryを呼ばない() {
+        void tagIdsがnullのとき既存タグの紐付けを解除する() {
             // given
-            // tagIds が null → tagRepository.findAllById を呼ばずに既存タグをそのまま維持する
+            // tagIds が null → 空配列と同じ扱いで、既存タグを解除して「タグなし」にする
             Tag existingTag = buildTag(tagId, "Java");
             LearningRecord existing = LearningRecord.builder()
                     .id(recordId)
@@ -284,6 +285,7 @@ class LearningRecordServiceTest {
             given(request.getContent()).willReturn("Javaの学習");
             given(request.getDuration()).willReturn(60);
             given(request.getTagIds()).willReturn(null);
+            given(tagRepository.findAllById(any())).willReturn(List.of());
 
             given(learningRecordRepository.save(any(LearningRecord.class))).willReturn(existing);
 
@@ -291,8 +293,38 @@ class LearningRecordServiceTest {
             LearningRecordResponse result = learningRecordService.update(userId, recordId, request);
 
             // then
-            assertThat(result.getTags()).hasSize(1);
-            then(tagRepository).should(never()).findAllById(any());
+            assertThat(result.getTags()).isEmpty();
+            then(tagRepository).should().findAllById(any());
+        }
+
+        @Test
+        void tagIdsが空配列のとき既存タグの紐付けを解除する() {
+            // given
+            Tag existingTag = buildTag(tagId, "Java");
+            LearningRecord existing = LearningRecord.builder()
+                    .id(recordId)
+                    .userId(userId)
+                    .date(LocalDate.of(2024, 1, 1))
+                    .content("Javaの学習")
+                    .duration(60)
+                    .tags(List.of(existingTag))
+                    .build();
+            given(learningRecordRepository.findById(recordId)).willReturn(Optional.of(existing));
+
+            LearningRecordUpdateRequest request = mock(LearningRecordUpdateRequest.class);
+            given(request.getDate()).willReturn(LocalDate.of(2024, 1, 1));
+            given(request.getContent()).willReturn("Javaの学習");
+            given(request.getDuration()).willReturn(60);
+            given(request.getTagIds()).willReturn(List.of());
+            given(tagRepository.findAllById(List.of())).willReturn(List.of());
+
+            given(learningRecordRepository.save(any(LearningRecord.class))).willReturn(existing);
+
+            // when
+            LearningRecordResponse result = learningRecordService.update(userId, recordId, request);
+
+            // then
+            assertThat(result.getTags()).isEmpty();
         }
 
         @Test
