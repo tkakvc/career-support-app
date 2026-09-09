@@ -21,6 +21,15 @@
 - 他ユーザーの学習記録IDを指定 → 403
 - 認証トークン不正 → 401
 
+**受け入れ基準:**
+- WHEN ユーザーが自分の学習記録に対してファイルをアップロードしたとき THE SYSTEM SHALL ファイルをストレージへ保存し、ファイル名・サイズ・MIMEタイプ・保存パスをDBに記録して、作成された添付ファイル情報を返す
+- IF `file` が未添付のとき THEN THE SYSTEM SHALL 400 を返す
+- IF ファイルサイズが10MBを超えるとき THEN THE SYSTEM SHALL 400 を返す
+- IF 対象の学習記録にすでに10件の添付ファイルがあるとき THEN THE SYSTEM SHALL 400 を返し、アップロードしない
+- IF 指定した学習記録IDが存在しないとき THEN THE SYSTEM SHALL 404 を返す
+- IF 指定した学習記録が他ユーザーのものであるとき THEN THE SYSTEM SHALL 403 を返す
+- IF 認証トークンが不正のとき THEN THE SYSTEM SHALL 401 を返す
+
 ---
 
 ## UC-02　添付ファイル一覧を確認する
@@ -39,6 +48,13 @@
 - 他ユーザーの学習記録IDを指定 → 403
 - 認証トークン不正 → 401
 
+**受け入れ基準:**
+- WHEN ユーザーが自分の学習記録に紐づく添付ファイル一覧を取得したとき THE SYSTEM SHALL 紐づくファイルのメタ情報一覧を返す
+- IF 添付ファイルが0件のとき THEN THE SYSTEM SHALL 空配列を返す
+- IF 指定した学習記録IDが存在しないとき THEN THE SYSTEM SHALL 404 を返す
+- IF 指定した学習記録が他ユーザーのものであるとき THEN THE SYSTEM SHALL 403 を返す
+- IF 認証トークンが不正のとき THEN THE SYSTEM SHALL 401 を返す
+
 ---
 
 ## UC-03　添付ファイルをダウンロードする
@@ -55,6 +71,12 @@
 - 存在しない学習記録IDまたは添付ファイルIDを指定 → 404
 - 他ユーザーの学習記録IDを指定 → 403
 - 認証トークン不正 → 401
+
+**受け入れ基準:**
+- WHEN ユーザーが自分の学習記録に紐づく添付ファイルのダウンロードを要求したとき THE SYSTEM SHALL ファイルのバイナリデータを返す
+- IF 指定した学習記録IDまたは添付ファイルIDが存在しないとき THEN THE SYSTEM SHALL 404 を返す
+- IF 指定した学習記録が他ユーザーのものであるとき THEN THE SYSTEM SHALL 403 を返す
+- IF 認証トークンが不正のとき THEN THE SYSTEM SHALL 401 を返す
 
 ---
 
@@ -76,6 +98,13 @@
 - 存在しない学習記録IDまたは添付ファイルIDを指定 → 404
 - 他ユーザーの学習記録IDを指定 → 403
 - 認証トークン不正 → 401
+
+**受け入れ基準:**
+- WHEN ユーザーが自分の学習記録に紐づく添付ファイルを削除したとき THE SYSTEM SHALL ストレージ上のファイル実体とDBレコードを両方削除する
+- WHEN 学習記録自体が削除されたとき THE SYSTEM SHALL 紐づく全添付ファイルをカスケード削除する
+- IF 指定した学習記録IDまたは添付ファイルIDが存在しないとき THEN THE SYSTEM SHALL 404 を返す
+- IF 指定した学習記録が他ユーザーのものであるとき THEN THE SYSTEM SHALL 403 を返す
+- IF 認証トークンが不正のとき THEN THE SYSTEM SHALL 401 を返す
 
 ---
 
