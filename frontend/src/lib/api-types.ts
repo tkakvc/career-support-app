@@ -1,3 +1,9 @@
+// ============================================================
+// バックエンドの DTO クラスと対応する型定義。バックエンドが変わればここも変わる。
+// なぜフロントエンドでも型定義を持つか
+//   → TypeScript の型チェックを API の境界まで効かせるため。
+//     型なしで api.post() の戻り値を受け取ると、存在しないフィールドへのアクセスがコンパイル時に検出できない。
+// ============================================================
 export interface LearningRecord {
   id: string;
   userId: string;
@@ -34,6 +40,7 @@ export interface Tag {
   name: string;
   type: string;
   createdBy: string | null;
+  createdAt: string;
 }
 
 export interface TagCreateRequest {
@@ -53,8 +60,19 @@ export interface Attachment {
   createdAt: string;
 }
 
+// バックエンドがリフレッシュトークン方式（アクセストークン+リフレッシュトークン）に対応したため、
+// 昔の { token: string } から4フィールドに変わっている（backend/AuthResponse.java と一致させる）。
 export interface AuthResponse {
-  token: string;
+  accessToken: string;
+  expiresIn: number; // アクセストークンの有効秒数（900 = 15分）
+  refreshToken: string;
+  refreshExpiresIn: number; // リフレッシュトークンの有効秒数（1209600 = 14日）
+}
+
+// POST /api/auth/refresh のレスポンス（アクセストークンだけを新しく発行する）
+export interface AccessTokenResponse {
+  accessToken: string;
+  expiresIn: number;
 }
 
 export interface LoginRequest {

@@ -90,6 +90,7 @@ public class LearningRecordService {
     public LearningRecordResponse update(UUID userId, UUID id, LearningRecordUpdateRequest request) {
         LearningRecord record = learningRecordRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("学習記録が見つかりません"));
+        // getById・delete と同じ所有者チェック。他人の学習記録を書き換えられないようにする。
         if (!record.getUserId().equals(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "他のユーザーの学習記録は更新できません");
         }
@@ -98,14 +99,15 @@ public class LearningRecordService {
         record.setContent(request.getContent());
         record.setDuration(request.getDuration());
 
-        // tagIds が null のとき既存タグを維持。それ以外は差し替え。
-        if (request.getTagIds() != null) {
-            List<Tag> tags = tagRepository.findAllById(request.getTagIds());
-            if (tags.size() != request.getTagIds().size()) {
-                throw new ResourceNotFoundException("指定されたタグが見つかりません");
-            }
-            record.setTags(tags);
+        // PUT なので送られた内容でタグ紐付けを全置き換えする。
+        // tagIds が null・空配列のどちらでも「タグなし」として扱い、既存の紐付けを解除する。
+        // create（createLearningRecord）も null と空配列を同じ扱いにしており、それに揃えている。
+        List<UUID> tagIds = request.getTagIds() == null ? Collections.emptyList() : request.getTagIds();
+        List<Tag> tags = tagRepository.findAllById(tagIds);
+        if (tags.size() != tagIds.size()) {
+            throw new ResourceNotFoundException("指定されたタグが見つかりません");
         }
+        record.setTags(tags);
 
         return new LearningRecordResponse(learningRecordRepository.save(record));
     }
@@ -117,6 +119,9 @@ public class LearningRecordService {
         if (!record.getUserId().equals(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "他のユーザーの学習記録は削除できません");
         }
+        // 添付ファイルを先に削除する。learning_record_attachments.learning_record_id は
+        // learning_records.id への外部キーなので、先に LearningRecord を消すと
+        // 添付ファイルの行が参照先を失い、外部キー制約違反でエラーになる。
         attachmentService.deleteAllByLearningRecordId(id);
         learningRecordRepository.delete(record);
         return new DeleteResponse();
