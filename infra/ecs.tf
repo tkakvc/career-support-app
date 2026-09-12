@@ -60,6 +60,16 @@ resource "aws_ecs_task_definition" "springboot" {
           # 値はフェーズ7-2で作成した ElastiCache のノードエンドポイントを参照（ベタ書きしない）。
           name  = "REDIS_HOST"
           value = aws_elasticache_cluster.redis.cache_nodes[0].address
+        },
+        {
+          # 添付ファイルの保存先を本番ではS3に切り替える（デフォルトはlocal。application.yamlのstorage.type参照）。
+          name  = "STORAGE_TYPE"
+          value = "s3"
+        },
+        {
+          # ベタ書きせずバケットのリソース参照にする（s3.tfで作成済みのバケット名と常に一致させるため）。
+          name  = "STORAGE_S3_BUCKET"
+          value = aws_s3_bucket.attachments.bucket
         }
       ]
       secrets = [
