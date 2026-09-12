@@ -43,9 +43,14 @@ app:
     allowed-origins: http://localhost:3000
 
 storage:
-  type: local
+  # local: ローカルディスクに保存（開発用）。s3: AWS S3 に保存（本番用）
+  # 本番はECSタスク定義（infra/ecs.tf）の環境変数 STORAGE_TYPE=s3 で上書きする
+  type: ${STORAGE_TYPE:local}
   local:
     base-path: uploads
+  s3:
+    bucket-name: ${STORAGE_S3_BUCKET:}
+    region: ${AWS_REGION:ap-northeast-1}
 
 
 # APIキーが漏れるリスクがあるため。WARN にするとエラー・警告だけ出て通信内容は出なくなる。

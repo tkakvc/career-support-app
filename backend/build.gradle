@@ -61,6 +61,10 @@ dependencies {
 	// Swagger UI（/swagger-ui.html）を自動生成するライブラリ。
 	// コントローラーのコードから、動くAPI一覧画面を自動で作ってくれる
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.8'
+
+	// 本番の添付ファイル保存先（S3）用クライアント（S3StorageService が使用）
+	implementation platform('software.amazon.awssdk:bom:2.29.29')
+	implementation 'software.amazon.awssdk:s3'
 }
 
 tasks.named('test') {
