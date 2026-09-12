@@ -20,6 +20,7 @@ import { z } from "zod"
 import { useLearningRecord } from "@/hooks/useLearningRecord"
 import { useUpdateLearningRecord, useDeleteLearningRecord } from "@/hooks/useLearningRecordMutations"
 import { useTags } from "@/hooks/useTags"
+import { AttachmentSection } from "@/components/features/records/AttachmentSection"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -318,8 +319,8 @@ export default function RecordDetailPage() {
       {/* ▼ 学習時間 */}
       <p className="text-muted-foreground text-sm">{record.duration}分</p>
 
-      {/* ▼ 添付ファイルセクション（Step 8 で実装予定） */}
-      {/* <AttachmentSection learningRecordId={record.id} /> */}
+      {/* ▼ 添付ファイルセクション */}
+      <AttachmentSection learningRecordId={record.id} />
 
       {/* ▼ 削除確認ダイアログ */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
