@@ -41,6 +41,11 @@ app:
     refresh-expiration: 1209600
   cors:
     allowed-origins: http://localhost:3000
+  cookie:
+    # リフレッシュトークンCookieのSecure属性。HTTPS環境が前提の本番はtrue。
+    # ローカル(http://localhost)はSecure=trueだとブラウザがCookieを送ってくれないため
+    # application-local.yamlでfalseに上書きする
+    secure: true
 
 storage:
   # local: ローカルディスクに保存（開発用）。s3: AWS S3 に保存（本番用）

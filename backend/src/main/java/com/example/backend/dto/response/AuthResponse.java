@@ -11,6 +11,7 @@ package com.example.backend.dto.response;
 //     短命アクセス＋失効可能なリフレッシュ、の組み合わせで「速さ」と「失効できる安全性」を両立する。
 // 【AI任せでOK】@Getter / @AllArgsConstructor の Lombok 構文
 // ============================================================
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -19,6 +20,12 @@ import lombok.Getter;
 public class AuthResponse {
     private String accessToken;      // APIauthに使うJWT（短命）
     private long expiresIn;          // accessToken の有効期限（秒）
+
+    // refreshTokenはJSON本文では返さず、AuthControllerがHttpOnly CookieのSet-Cookieヘッダーとして
+    // 返す。このクラス自体には残してあるのは、AuthServiceからAuthControllerへCookieを組み立てるための
+    // 値を渡す手段として使っているため。@JsonIgnoreでJSONへのシリアライズだけ止めている
+    @JsonIgnore
     private String refreshToken;     // accessToken 再発行用の鍵（長命・Redis管理）
+    @JsonIgnore
     private long refreshExpiresIn;   // refreshToken の有効期限（秒）
 }

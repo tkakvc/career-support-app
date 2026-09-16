@@ -17,3 +17,5 @@ app:
     refresh-expiration: 1209600
   cors:
     allowed-origins: http://localhost:3000
+  cookie:
+    secure: false

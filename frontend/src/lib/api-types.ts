@@ -62,13 +62,11 @@ export interface Attachment {
   createdAt: string;
 }
 
-// バックエンドがリフレッシュトークン方式（アクセストークン+リフレッシュトークン）に対応したため、
-// 昔の { token: string } から4フィールドに変わっている（backend/AuthResponse.java と一致させる）。
+// リフレッシュトークンはJSON本文には含まれない。サーバーがHttpOnly Cookieとして
+// 直接ブラウザに保存するため、フロントのJavaScriptはそもそも値を受け取らない。
 export interface AuthResponse {
   accessToken: string;
   expiresIn: number; // アクセストークンの有効秒数（900 = 15分）
-  refreshToken: string;
-  refreshExpiresIn: number; // リフレッシュトークンの有効秒数（1209600 = 14日）
 }
 
 // POST /api/auth/refresh のレスポンス（アクセストークンだけを新しく発行する）
@@ -86,6 +84,27 @@ export interface SignupRequest {
   email: string;
   password: string;
   displayName: string;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  displayName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateProfileRequest {
+  displayName: string;
+}
+
+export interface UpdatePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface PasswordUpdateResponse {
+  result: string;
 }
 
 export interface SuggestResponse {
