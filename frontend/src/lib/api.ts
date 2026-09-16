@@ -8,6 +8,11 @@
 //     401が返ってきたら、まずリフレッシュトークン（14日・Redisで失効管理）で
 //     新しいアクセストークンを取り直し、失敗した元のリクエストをもう一度送り直す。
 //     リフレッシュ自体も失敗した（リフレッシュトークンも無効）場合だけログインページに飛ばす。
+//
+// 【変更履歴】なぜ withCredentials: true が要るか
+//   → リフレッシュトークンはHttpOnly Cookieとしてサーバーが発行する方式に変えた。
+//     axiosはデフォルトではCookieを送らないので、withCredentials: true を付けて
+//     「このオリジン宛のリクエストにはCookieも一緒に送ってよい」と明示する必要がある。
 // ============================================================
 import axios from "axios";
 import { useAuthStore } from "@/store/authStore";
@@ -17,6 +22,7 @@ import { AccessTokenResponse } from "@/lib/api-types";
 // axios.create() で「設定済みの axios インスタンス」を作る。
 const api = axios.create({
   baseURL: "http://localhost:8080/api", // ← 自分で考える部分：バックエンドの URL
+  withCredentials: true, // リフレッシュトークンのCookieを送受信するために必要
 });
 
 // ▼ ドキュメントから貼る部分（request interceptor の構文）
@@ -59,23 +65,25 @@ api.interceptors.request.use((config) => {
 // api（上のインスタンス）で /auth/refresh を呼ぶと、request interceptorが古い
 // アクセストークンをまた付けてしまい、response interceptorにも捕まってループしうる。
 // なので /auth/refresh 用は interceptor を通さない素の axios を使う。
-const refreshClient = axios.create({ baseURL: "http://localhost:8080/api" });
+// withCredentials: true はここでも必要（リフレッシュトークンのCookieを送るため）。
+const refreshClient = axios.create({
+  baseURL: "http://localhost:8080/api",
+  withCredentials: true,
+});
 
 // ▼ 同時に複数のAPIが401になったとき、/refresh を複数回呼ばないようにする仕組み。
 // 1回目の401でリフレッシュ処理を始めたら、そのPromiseを使い回す。
 let refreshingPromise: Promise<string> | null = null;
 
-async function refreshAccessToken(): Promise<string> {
+// ▼ export する理由：(main)/layout.tsx がアプリ起動時の「サイレントリフレッシュ」
+// （ページを開いた瞬間にCookieでログイン状態を復元する処理）でもこの関数を再利用するため。
+export async function refreshAccessToken(): Promise<string> {
   if (!refreshingPromise) {
     refreshingPromise = (async () => {
-      const refreshToken = useAuthStore.getState().refreshToken;
-      if (!refreshToken) {
-        throw new Error("no refresh token");
-      }
-      // POST /api/auth/refresh { refreshToken } → { accessToken, expiresIn }
-      const res = await refreshClient.post<AccessTokenResponse>("/auth/refresh", {
-        refreshToken,
-      });
+      // リフレッシュトークンはHttpOnly Cookieとしてブラウザが自動で送ってくれるため、
+      // ここでは何も読み出さず・リクエストボディにも詰めない。
+      // POST /api/auth/refresh → { accessToken, expiresIn }
+      const res = await refreshClient.post<AccessTokenResponse>("/auth/refresh");
       useAuthStore.getState().setAccessToken(res.data.accessToken);
       return res.data.accessToken;
     })().finally(() => {
