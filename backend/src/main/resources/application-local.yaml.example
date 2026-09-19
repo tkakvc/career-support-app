@@ -1,6 +1,8 @@
 app:
   jwt:
     secret: 32文字以上の適当な文字列に置き換える
+  cookie:
+    secure: false
 
 spring:
   ai:

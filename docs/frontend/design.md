@@ -7,7 +7,7 @@
 | ダッシュボード（学習記録一覧・検索）／学習記録 詳細・編集／新規作成／ファイル添付 | [../learning-records/screen/overview.md](../learning-records/screen/overview.md) |
 | タグ管理 | [../tags/screen/overview.md](../tags/screen/overview.md) |
 | AI 提案 | [../ai/screen/overview.md](../ai/screen/overview.md) |
-| 設定 | [../settings/api/overview.md](../settings/api/overview.md)（API設計） |
+| 設定 | [../settings/screen/overview.md](../settings/screen/overview.md) |
 
 ---
 

@@ -29,9 +29,11 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // CSRFを無効化: REST APIはCookieでセッション管理しないため不要。
-            // CSRFはブラウザがCookieを自動送信する仕組みを悪用した攻撃で、
-            // JWTをAuthorizationヘッダーで送る方式では成立しない。
+            // CSRFを無効化: Spring Securityのこの機能はセッション認証（Cookieでログイン状態を持つ方式）
+            // 向けの対策なので、Authorizationヘッダーで認証するこのAPIには対象外。
+            // なお /api/auth/refresh・/api/auth/logout はリフレッシュトークンをHttpOnly Cookieで
+            // 受け取るためCookieは使うが、CSRF対策はここではなく下記CORS設定（許可オリジンを絞った上での
+            // allowCredentials）とSameSite=Lax属性の組み合わせで行っている。
             .csrf(csrf -> csrf.disable())
 
             // CORSの設定を適用
@@ -62,8 +64,13 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         // application.yaml で指定したオリジンのみ許可
         config.setAllowedOrigins(List.of(allowedOrigins));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
+        // リフレッシュトークンをHttpOnly Cookieでやり取りするために必要。
+        // ブラウザは allowCredentials が true の場合のみ、クロスオリジンのリクエストにCookieを付けて送る。
+        // setAllowedOrigins に "*"（ワイルドカード）ではなく具体的なオリジンを指定しているからこそ許可できる設定
+        // （ワイルドカードと allowCredentials(true) は仕様上併用できない）。
+        config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         // 全パスに対してCORS設定を適用

