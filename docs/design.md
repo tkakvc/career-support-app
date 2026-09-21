@@ -156,20 +156,25 @@ users
 | POST | /api/auth/refresh | リフレッシュトークンでアクセストークンを再発行 | ○（リフレッシュトークンで認証） |
 | POST | /api/auth/logout | リフレッシュトークンを失効させる | ○（リフレッシュトークンで認証） |
 
-#### 認証方式：短命アクセストークン＋リフレッシュトークン（Redisで失効管理）
+#### 認証方式：短命アクセストークン＋リフレッシュトークン（Redisで失効管理・HttpOnly Cookieで受け渡し）
 
 - 当初はステートレスなJWT1本のみ（ログアウトはフロントがトークンを捨てるだけ）で設計していたが、「一度発行したトークンを有効期限まで失効できない（強制ログアウト・盗難時の無効化ができない）」という弱点があるため、一般的な**アクセストークン＋リフレッシュトークン方式**に変更した。
 - 仕組み
-  - アクセストークン：API認証に使うJWT。短命（15分）。ステートレスでサーバーに保存しない。毎リクエストの検証はこれまで通り署名検証のみで完結する
+  - アクセストークン：API認証に使うJWT。短命（15分）。ステートレスでサーバーに保存しない。毎リクエストの検証はこれまで通り署名検証のみで完結する。フロントはメモリ（Zustand、persistなし）にのみ保持し、リロードすると消える
   - リフレッシュトークン：アクセストークンを再発行するための鍵。長命（14日）。**Redis（ElastiCache）に保存**し、失効できるようにする
 - なぜリフレッシュトークンをRedisに置くか
   - RedisはキーごとにTTL（有効期限）を設定でき、期限切れを自動削除できる。リフレッシュトークンの寿命管理と相性が良い
   - ログアウト・強制失効は「該当リフレッシュトークンをRedisから削除する」だけで実現できる
+- なぜリフレッシュトークンをJSONの本文ではなくHttpOnly Cookieで渡すか
+  - 当初はリフレッシュトークンもJSONレスポンスの本文で返し、フロントがlocalStorageに保存していた。しかしこの方式だと、XSS（悪意あるJavaScriptの実行）が1件でも起きればJavaScriptから`localStorage`を読むだけでaccessToken・refreshTokenの両方が盗める。特にrefreshTokenは14日間有効なため被害が長期化する
+  - `HttpOnly`属性付きのCookieはJavaScriptから中身を読めないため、XSSが起きてもrefreshToken自体は盗まれない
+  - `SameSite=Lax`を付与し、他サイトからのリクエストにはこのCookieが自動送信されないようにする（CSRF対策）。加えてCORSの許可オリジンをフロントのオリジンのみに絞っているため、他サイトからの`/api/auth/refresh`・`/api/auth/logout`呼び出しはブラウザのプリフライトの時点でブロックされる
 - 各エンドポイントの動作
-  - ログイン：アクセストークン＋リフレッシュトークンを発行し、リフレッシュトークンをRedisに保存（`refresh:{userId}:{tokenId}` → 有効、TTL14日）
-  - リフレッシュ：リフレッシュトークンがRedisに存在すれば、新しいアクセストークンを発行
-  - ログアウト：該当リフレッシュトークンをRedisから削除する。以後そのトークンでは再発行できなくなる
+  - ログイン／サインアップ：アクセストークンをレスポンス本文で返し、リフレッシュトークンは`Set-Cookie`（`HttpOnly; SameSite=Lax; Path=/api/auth`。本番は`Secure`も付与）で発行しつつRedisにも保存（`refresh:{token}` → userId、TTL14日）
+  - リフレッシュ：ブラウザが自動送信するCookieのリフレッシュトークンがRedisに存在すれば、新しいアクセストークンを発行
+  - ログアウト：Cookieのリフレッシュトークンを受け取り、該当キーをRedisから削除する。以後そのトークンでは再発行できなくなる。レスポンスでは同じCookieを`Max-Age=0`で返し、ブラウザ側のCookieも削除する
 - 即時失効について：アクセストークンは短命（15分）なので、ログアウト後も最大15分は技術的に有効なまま。これは一般的な妥協点として許容する。より厳密な即時失効が必要になれば、アクセストークンのjti拒否リスト（denylist）をRedisに持つ方式を追加できる（現時点では過剰と判断し採用しない）
+- ページ再読み込み時のセッション復元：以前はlocalStorageから同期的に復元していたが、Cookie化に伴い「起動時に`/api/auth/refresh`を呼び、Cookieを使ってサーバーに検証してもらう」方式（サイレントリフレッシュ）に変更した（`frontend/src/app/(main)/layout.tsx`）
 
 **POST /api/auth/login リクエスト例：**
 ```json
@@ -179,22 +184,21 @@ users
 }
 ```
 
-**レスポンス例：**
+**レスポンス例（本文）：**
 ```json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expiresIn": 900,
-  "refreshToken": "d9f3...ランダムな文字列",
-  "refreshExpiresIn": 1209600
+  "expiresIn": 900
 }
 ```
 
-**POST /api/auth/refresh リクエスト例：**
-```json
-{
-  "refreshToken": "d9f3...ランダムな文字列"
-}
+**レスポンスヘッダー（Cookie）：**
 ```
+Set-Cookie: refreshToken=d9f3...ランダムな文字列; HttpOnly; SameSite=Lax; Path=/api/auth; Max-Age=1209600
+```
+
+**POST /api/auth/refresh リクエスト：**
+本文なし。リフレッシュトークンはCookieとしてブラウザが自動送信する。
 
 **レスポンス例：**
 ```json
@@ -291,20 +295,30 @@ users
 
 ### 4.1 JWT 認証フロー
 
+最新版（アクセストークン＋リフレッシュトークン方式、詳細は3.2参照）。
+
 ```
-[フロント]          [バックエンド]
+[フロント]                       [バックエンド]
     │
-    │── POST /auth/login ──▶│
-    │                       │ パスワード検証
-    │                       │ JWT 生成
-    │◀── JWT トークン ───────│
+    │── POST /auth/login ───────▶│
+    │                            │ パスワード検証
+    │                            │ アクセストークン(JWT)生成
+    │                            │ リフレッシュトークン生成・Redis保存
+    │◀── { accessToken } ────────│ （本文）
+    │◀── Set-Cookie: refreshToken│ （HttpOnly Cookie）
     │
-    │ localStorage に保存
+    │ accessTokenはメモリ(Zustand)のみに保持。persistしない
     │
-    │── GET /learning-records ▶│
-    │  Authorization: Bearer  │ JWT 検証
-    │                        │ ユーザー特定
-    │◀── レスポンス ──────────│
+    │── GET /learning-records ──▶│
+    │  Authorization: Bearer     │ JWT 検証（署名・有効期限）
+    │                            │ ユーザー特定
+    │◀── レスポンス ──────────────│
+    │
+    │（15分後、accessTokenが期限切れ→401）
+    │
+    │── POST /auth/refresh ─────▶│
+    │  Cookie: refreshToken      │ Redisで照合
+    │◀── { accessToken（新）} ────│
 ```
 
 ### 4.2 JWT 設定
@@ -312,15 +326,16 @@ users
 | 項目 | 設定値 |
 |---|---|
 | アルゴリズム | HS256 |
-| 有効期限 | 1 時間（アクセストークン） |
-| ペイロード | userId, email, issuedAt, expiresAt |
-| シークレット | 環境変数で管理 |
+| 有効期限 | アクセストークン 900秒（15分）／リフレッシュトークン 1209600秒（14日） |
+| ペイロード（アクセストークン） | userId, issuedAt, expiresAt |
+| シークレット | 環境変数（`APP_JWT_SECRET`）で管理 |
+| リフレッシュトークンの実体 | 意味を持たないランダム文字列（Redisに`userId`を紐付けて保存。JWTではない） |
 
 ### 4.3 Spring Security 設定方針
 
 - `/api/auth/**` は認証不要（permit all）
-- それ以外の `/api/**` は JWT 必須
-- CORS 設定：フロントエンドオリジンのみ許可
+- それ以外の `/api/**` は JWT（アクセストークン）必須
+- CORS 設定：フロントエンドオリジンのみ許可。加えて `allowCredentials(true)` を設定し、リフレッシュトークンのCookieをクロスオリジン（ローカル開発時：`localhost:3000`→`localhost:8080`）でも送受信できるようにしている
 
 ---
 
@@ -401,13 +416,14 @@ services:
 
 | 観点 | 対策 |
 |---|---|
-| 認証 | JWT 認証（Spring Security） |
+| 認証 | アクセストークン（短命JWT）＋リフレッシュトークン（Redisで失効管理、詳細は3.2） |
+| リフレッシュトークンの保管 | HttpOnly・SameSite=Lax のCookie（JavaScriptから読めずXSSに強い） |
 | パスワード | BCrypt ハッシュ化 |
 | 入力検証 | Bean Validation（@Valid） |
-| CORS | 許可オリジンのみ設定 |
+| CORS | 許可オリジンのみ設定・allowCredentials(true)（Cookie送受信のため） |
 | API 認可 | ログインユーザーのデータのみアクセス可能 |
 | 秘密情報 | 環境変数（application.properties に直書き禁止） |
-| HTTPS | 本番環境では HTTPS 化（AWS 証明書 or Let's Encrypt） |
+| HTTPS | 本番環境では HTTPS 化（AWS 証明書 or Let's Encrypt）。Cookieの`Secure`属性も本番のみ有効化 |
 
 ---
 
