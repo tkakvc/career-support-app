@@ -9,6 +9,13 @@ spring:
   ai:
     openai:
       api-key: dummy-key-for-tests
+  cloud:
+    aws:
+      region:
+        static: ap-northeast-1
+      credentials:
+        access-key: dummy-access-key-for-tests
+        secret-key: dummy-secret-key-for-tests
 
 app:
   jwt:

@@ -22,6 +22,9 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	// マイグレーション基盤。memo/残作業.md「マイグレーション基盤（Flyway等）」対応
+	implementation 'org.flywaydb:flyway-core'
+	implementation 'org.flywaydb:flyway-database-postgresql'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -29,13 +32,15 @@ dependencies {
 	// 存在しないURLになり、GlobalExceptionHandlerの catch-all に拾われて500を返してしまう
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
-	// @Cacheable を使えるようにする土台（キャッシュの仕組み自体）
-	implementation 'org.springframework.boot:spring-boot-starter-cache'
 	// OpenAI API を呼び出すためのライブラリ（AiConfig.java の ChatClient が使う）
+	// 【2026-09-XX追記】旧・学習提案機能のキャッシュ（spring-boot-starter-cache・caffeine）は、
+	// 参考資料生成への作り替えで廃止した（interest次第で結果が変わるためキャッシュ自体が
+	// 成立しない。詳しくはmemo/ai/AIガードレール強化.md）
 	implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter:1.0.0-M6'
-	// キャッシュの実際の保存先（実装）。上の spring-boot-starter-cache とセットで使う。
-	// AiConfig.java の CaffeineCacheManager が、AI提案結果を24時間キャッシュするのに使っている
-	implementation 'com.github.ben-manes.caffeine:caffeine'
+	// AI参考資料生成の非同期化（SQS）で使う。memo/ai/AI提案の非同期化(SQS).md 参照
+	implementation 'io.awspring.cloud:spring-cloud-aws-starter-sqs:3.4.0'
+	// OpenAIが生成したMarkdown要約をHTMLに変換する（LLMに直接HTMLを生成させると崩れやすいため）
+	implementation 'org.commonmark:commonmark:0.22.0'
 
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'org.postgresql:postgresql'

@@ -1,43 +1,29 @@
 package com.example.backend.config;
 
-import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.cache.caffeine.CaffeineCacheManager;
+import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
+import org.springframework.boot.http.client.ClientHttpRequestFactorySettings;
+import org.springframework.boot.web.client.RestClientCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 // ============================================================
 // 【このファイル全体の方針】
 // 【面接で説明できるようにする】なぜ @Configuration クラスに @Bean を書くか
-//   → ChatClient や CacheManager は1つのインスタンスをアプリ全体で使い回す（シングルトン）。
+//   → ChatClient は1つのインスタンスをアプリ全体で使い回す（シングルトン）。
 //     new で都度作ると設定の重複・無駄なコストが発生する。
 //     @Bean として登録すれば Spring が管理し、依存するクラスに自動注入（DI）してくれる。
-// 【AI任せでOK】@EnableCaching の書き方・CaffeineCacheManager の設定方法
-// ============================================================
-// ============================================================
-// AiConfig とは
 // ============================================================
 //
 // このクラスは「AI機能に必要なオブジェクトをSpringに登録する」設定クラス。
-//
-// @Configuration を付けると「このクラスはSpringの設定クラスだ」とSpringに伝えられる。
-// @Bean を付けたメソッドの戻り値は、Springが管理するオブジェクト（Bean）として登録される。
-// 登録されたBeanは、他のクラスで @Autowired や @RequiredArgsConstructor で自動注入できる。
-//
-// このクラスでは2つのBeanを登録している：
-//   1. ChatClient  → OpenAI APIを呼び出すためのオブジェクト
-//   2. CacheManager → キャッシュを管理するオブジェクト
+// 【2026-09-XX追記】旧・学習提案機能のCacheManager Bean（Caffeine、24時間キャッシュ）は、
+// 参考資料生成への作り替えで廃止した。代わりにOpenAI呼び出し用HTTPクライアントの
+// タイムアウトを設定するRestClientCustomizer Beanを追加した（下記参照）
 //
 // ============================================================
-
-// @EnableCaching: アプリ全体でキャッシュ機能を有効にするアノテーション。
-// これを付けないと @Cacheable アノテーションが動かない。
 @Configuration
-@EnableCaching
 public class AiConfig {
 
     // ============================================================
@@ -64,36 +50,22 @@ public class AiConfig {
         return builder.build();
     }
 
-    // ============================================================
-    // CacheManager Bean（Caffeine キャッシュ）
-    // ============================================================
+    // 【学習ポイント：押さえておく】connectTimeoutとreadTimeoutは別区間を測っている。
+    // connectTimeout＝相手サーバーとのTCP接続が確立するまでの時間（相手が生きていれば速い→短くてよい）。
+    // readTimeout＝接続後、リクエストを送ってレスポンスが返るまでの時間（OpenAIの生成待ちはここに乗る→長めに取る）。
+    // 1つの値で「合計30秒」のように設定すると、繋がらない障害でも無駄に長く待つことになる。
+    // 詳しくは memo/java/tcp-connect-timeout.md 参照。
     //
-    // 【キャッシュとは】
-    //   一度計算した結果を保存しておいて、同じリクエストが来たとき
-    //   再計算せずに保存済みの結果を返す仕組み。
-    //   → OpenAI APIを毎回呼ばずに済むので、コストと時間を節約できる。
-    //
-    // 【Caffeine とは】
-    //   Java で最もよく使われるインメモリキャッシュライブラリ。
-    //   「インメモリ」= サーバーのメモリ上に保存する（DBやRedisには保存しない）。
-    //   アプリを再起動するとキャッシュは消える。
-    //   ※ 覚える必要はない。「キャッシュの実装ライブラリ」くらいの認識でOK。
-    //
-    // 【expireAfterWrite(24, TimeUnit.HOURS) とは】
-    //   「書き込みから24時間後にキャッシュを削除する」設定。
-    //   TimeUnit.HOURS は「単位：時間」という意味。
-    //   → 24時間以内に同じユーザーが叩いたら、OpenAIを呼ばずにキャッシュを返す。
-    //
-    // 【"suggestions" とは】
-    //   キャッシュに付ける名前。
-    //   AiService の @Cacheable(value = "suggestions") と名前が一致することで
-    //   「学習提案のキャッシュはここで設定した条件で管理する」と紐付けられる。
-    //
+    // 【学習ポイント：使い方だけでよい】ClientHttpRequestFactoryBuilder.detect().build(settings) という
+    // 呼び出し方自体はSpring Bootのバージョンで変わりうる実装の都合（Spring Boot 3.4で
+    // ClientHttpRequestFactorySettings.toRequestFactory() が廃止され、Builder経由になった）。
+    // 「RestClientCustomizerというBeanを1つ足せば、Spring AIが使うHTTPクライアントの設定を横から差し込める」
+    // という考え方だけ覚えておけば十分で、正確な書き方は使うたびに公式ドキュメントを見ればよい。
     @Bean
-    public CacheManager cacheManager() {
-        CaffeineCacheManager manager = new CaffeineCacheManager("suggestions");
-        // 学習提案の結果を24時間キャッシュする
-        manager.setCaffeine(Caffeine.newBuilder().expireAfterWrite(24, TimeUnit.HOURS));
-        return manager;
+    public RestClientCustomizer aiRestClientCustomizer() {
+        ClientHttpRequestFactorySettings settings = ClientHttpRequestFactorySettings.defaults()
+                .withConnectTimeout(Duration.ofSeconds(5))
+                .withReadTimeout(Duration.ofSeconds(30));
+        return builder -> builder.requestFactory(ClientHttpRequestFactoryBuilder.detect().build(settings));
     }
 }

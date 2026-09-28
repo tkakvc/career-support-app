@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -80,6 +81,21 @@ public class TagService {
 
         tag.setName(request.getName());
         return new TagResponse(tagRepository.save(tag));
+    }
+
+    // AI参考資料の分類用（AiService.generateResult）。既存の可視タグ（defaultタグ＋自分のuserタグ）に
+    // 大文字小文字を無視して一致するものがあれば返すだけの読み取り専用メソッド。
+    // 【学習ポイント：押さえておく】ここでタグを新規作成しない。タグの作成は常に
+    // ユーザーの明示的な操作を起点にすべきで（既存のcreateTag()も必ずユーザーの操作から呼ばれる）、
+    // 非同期ジョブ（AiJobWorker経由）がAIの判断だけで勝手にタグを作るのは一貫性が無いため。
+    // 一致しなかった場合、実際の新規作成は「学習記録をつける」等のユーザー操作時にcreateTag()を
+    // 呼ぶ形で行う（AiService・AiReferenceにはタグ名の"提案"だけが保存される）。
+    @Transactional(readOnly = true)
+    public Optional<Tag> findMatchingVisibleTag(UUID userId, String name) {
+        String normalized = name.strip();
+        return tagRepository.findVisibleTags(userId).stream()
+                .filter(t -> t.getName().equalsIgnoreCase(normalized))
+                .findFirst();
     }
 
     @Transactional

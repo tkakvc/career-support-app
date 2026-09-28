@@ -16,8 +16,17 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      # Flyway導入により、スキーマの作成・変更はマイグレーションファイルに一元化した。
+      # updateのままだとHibernateも独自にスキーマを変更しようとして二重管理になるため、
+      # 「エンティティの定義と実際のスキーマが一致しているかだけ確認する」validateに変更する
+      ddl-auto: validate
     show-sql: true
+
+  flyway:
+    # 既存のテーブル（ddl-auto: updateで作成済み）をFlyway導入前の状態として扱い、
+    # V1（このタイミングで追加するai_jobsテーブル）から管理を始める
+    baseline-on-migrate: true
+    baseline-version: 0
 
   servlet:
     multipart:
@@ -31,6 +40,17 @@ spring:
         options:
           model: gpt-4o-mini
           temperature: 0.7
+      moderation:
+        options:
+          model: omni-moderation-latest
+
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-northeast-1}
+      credentials:
+        # ローカル開発・ECSともにIAMロール/認証情報チェーンから自動取得する（アクセスキーを直接書かない）
+        instance-profile: true
 
 app:
   jwt:
@@ -46,6 +66,11 @@ app:
     # ローカル(http://localhost)はSecure=trueだとブラウザがCookieを送ってくれないため
     # application-local.yamlでfalseに上書きする
     secure: true
+  websearch:
+    # Tavily（LLM向けのWeb検索API）。参考資料生成（AiService.generateResult）で、
+    # OpenAIに要約させる前に実際の検索結果を取得するために使う
+    api-key: ${TAVILY_API_KEY:}
+    base-url: https://api.tavily.com
 
 storage:
   # local: ローカルディスクに保存（開発用）。s3: AWS S3 に保存（本番用）
