@@ -6,7 +6,7 @@
 |---|---|
 | ダッシュボード（学習記録一覧・検索）／学習記録 詳細・編集／新規作成／ファイル添付 | [../learning-records/screen/overview.md](../learning-records/screen/overview.md) |
 | タグ管理 | [../tags/screen/overview.md](../tags/screen/overview.md) |
-| AI 提案 | [../ai/screen/overview.md](../ai/screen/overview.md) |
+| AI 情報収集・提案 | [../ai/screen/overview.md](../ai/screen/overview.md) |
 | 設定 | [../settings/screen/overview.md](../settings/screen/overview.md) |
 
 ---
@@ -31,8 +31,9 @@
 | POST | /api/learning-records/{id}/attachments | 添付ファイルアップロード |
 | GET | /api/learning-records/{id}/attachments/{aid}/download | ファイルダウンロード |
 | DELETE | /api/learning-records/{id}/attachments/{aid} | 添付ファイル削除 |
-| POST | /api/ai/suggest | AI学習提案 |
-| POST | /api/ai/decompose | AIタスク分解 |
+| POST | /api/ai/references | 参考資料生成（`interest`・`recordId`は任意） |
+| GET | /api/ai/references | 保存済み参考資料一覧（`?tag={tagId}`で絞り込み） |
+| GET | /api/ai/jobs/{jobId} | 生成ジョブの状態・結果取得 |
 | GET | /api/users/me | プロフィール取得 |
 | PATCH | /api/users/me | 表示名の変更 |
 | PUT | /api/users/me/password | パスワード変更 |
@@ -47,9 +48,9 @@
 | /signup | サインアップ | POST /api/auth/signup |
 | /dashboard | ダッシュボード（学習記録一覧・検索） | GET /api/learning-records, GET /api/tags |
 | /records/new | 学習記録作成 | POST /api/learning-records, GET /api/tags |
-| /records/[id] | 学習記録詳細・編集 | GET/PUT/DELETE /api/learning-records/{id}, GET /api/tags, GET/POST/DELETE /api/learning-records/{id}/attachments, GET .../download |
+| /records/[id] | 学習記録詳細・編集 | GET/PUT/DELETE /api/learning-records/{id}, GET /api/tags, GET/POST/DELETE /api/learning-records/{id}/attachments, GET .../download, POST /api/ai/references（`recordId`指定） |
 | /tags | タグ管理 | GET/POST/PUT/DELETE /api/tags |
-| /ai | AI 提案 | POST /api/ai/suggest, POST /api/ai/decompose |
+| /ai | AI 情報収集・提案 | POST /api/ai/references, GET /api/ai/references, GET /api/ai/jobs/{jobId}, POST /api/tags（タグ未作成時）, POST /api/learning-records |
 | /settings | 設定 | GET/PATCH /api/users/me, PUT /api/users/me/password |
 
 ---
@@ -78,7 +79,7 @@ app/
     tags/
       page.tsx               ← タグ管理
     ai/
-      page.tsx               ← AI 提案
+      page.tsx               ← AI 情報収集・提案
     settings/
       page.tsx               ← 設定
 ```
