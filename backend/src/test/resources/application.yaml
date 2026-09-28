@@ -26,3 +26,6 @@ app:
     allowed-origins: http://localhost:3000
   cookie:
     secure: false
+  websearch:
+    api-key: dummy-tavily-key-for-tests
+    base-url: https://api.tavily.com
