@@ -88,6 +88,10 @@ resource "aws_ecs_task_definition" "springboot" {
         {
           name      = "OPENAI_API_KEY"
           valueFrom = "arn:aws:ssm:ap-northeast-1:460677238703:parameter/career-support/springboot/openai_api_key"
+        },
+        {
+          name      = "TAVILY_API_KEY"
+          valueFrom = "arn:aws:ssm:ap-northeast-1:460677238703:parameter/career-support/springboot/tavily_api_key"
         }
       ]
       logConfiguration = {
