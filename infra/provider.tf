@@ -25,6 +25,12 @@ terraform {
       #   メジャーが上がると破壊的変更が入りうるので、意図せず6系に上がらないようにしている。
       version = "~> 5.0"
     }
+    # github_oidc.tf の tls_certificate データソースで使う（GitHubのOIDC証明書のフィンガープリントを
+    # ハードコードせず、実際のエンドポイントから毎回取得するため）
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
   }
 }
 
