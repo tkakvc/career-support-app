@@ -90,6 +90,7 @@ users
 - ユーザーは独自のタグを新規作成・編集・削除できる
 - 学習記録には複数のタグを付与可能
 - タグは検索や集計にも利用する
+- AI 参考資料（8.1・3.6参照）の分類先も、既存のタグをそのまま使う（新しいタグ種別やテーブルは追加しない）
 
 タグの詳細なAPI仕様・データモデルは docs/tags/api/ を、学習記録の詳細は docs/learning-records/api/ を参照
 
@@ -132,6 +133,31 @@ users
 | content_type | VARCHAR(100) | NOT NULL | ファイルの種類（例: image/png, application/pdf） |
 | file_size | BIGINT | NOT NULL | ファイルサイズ（バイト） |
 | created_at | TIMESTAMP | NOT NULL | アップロード日時 |
+
+#### ai_references（AI 参考資料）
+
+F09（AI 情報収集・提案）で生成した参考資料の保存先。学習記録とは独立したテーブルで、学習記録への変換は「保存済みの値をもとに学習記録作成フォームへ引き継ぐ」だけで、両者の間に外部キーの関連は持たせない。
+
+| カラム名 | 型 | 制約 | 説明 |
+|---|---|---|---|
+| id | UUID | PK | 参考資料 ID |
+| user_id | UUID | FK(users.id), NOT NULL | ユーザー ID |
+| interest | VARCHAR(200) | nullable | 生成時に入力された興味（未入力の場合は学習記録のみから生成） |
+| summary_html | TEXT | NOT NULL | 要約本文（HTML形式。Markdown生成→HTML変換したもの） |
+| tag_id | UUID | FK(tags.id), nullable | 分類先のタグ。既存タグに一致した場合だけ値が入る |
+| suggested_tag_name | VARCHAR(50) | nullable | tag_idがnullのときだけ値が入る、AIが提案したタグ名（まだ作成されていない） |
+| created_at | TIMESTAMP | NOT NULL | 生成日時 |
+
+タグの新規作成は、生成時（非同期ジョブ）では行わない。既存タグ（default＋自分のuserタグ）に大文字小文字を無視して一致するものがあればtag_idにセットし、無ければ作成せずsuggested_tag_nameに提案名だけを残す。実際の作成は「学習記録をつける」等、ユーザーの明示的な操作を起点に行う（既存の`POST /api/tags`をそのまま使う）。非同期ジョブがAIの判断だけでタグを作ってしまうと、タグ作成が常にユーザー起点であるという他の実装との一貫性が崩れるため。
+
+#### ai_reference_links（参考資料の参照リンク、1対多）
+
+| カラム名 | 型 | 制約 | 説明 |
+|---|---|---|---|
+| id | UUID | PK | ID |
+| ai_reference_id | UUID | FK(ai_references.id), NOT NULL | 参考資料 ID |
+| url | VARCHAR(2000) | NOT NULL | 参照リンク URL |
+| title | VARCHAR(255) | nullable | リンクタイトル |
 
 ---
 
@@ -284,10 +310,10 @@ Set-Cookie: refreshToken=d9f3...ランダムな文字列; HttpOnly; SameSite=Lax
 
 | メソッド | パス | 説明 |
 |---|---|---|
-| POST | /api/ai/suggest | 学習提案生成（結果はユーザー単位でキャッシュ） |
-| POST | /api/ai/decompose | 目標のタスク分解 |
+| POST | /api/ai/references | 参考資料生成（Web検索＋要約、非同期ジョブ。学習記録・任意入力の興味を元に生成。学習記録の詳細画面からは特定の記録IDも渡せる） |
+| GET | /api/ai/references | 保存済み参考資料の一覧取得 |
 
-両エンドポイントとも JWT 必須・1ユーザー1日10回まで（超過で 429）。詳細は [ai/api/](ai/api/)、画面は [ai/screen/overview.md](ai/screen/overview.md) を参照。
+生成エンドポイントは JWT 必須・1ユーザー1日10回まで（超過で 429）。一覧取得にレート制限はない。詳細は [ai/api/](ai/api/)、画面は [ai/screen/overview.md](ai/screen/overview.md) を参照。
 
 ---
 
@@ -349,9 +375,9 @@ Set-Cookie: refreshToken=d9f3...ランダムな文字列; HttpOnly; SameSite=Lax
 | P02 | サインアップ | /signup | 新規登録 | ― |
 | P03 | ダッシュボード（学習記録一覧・検索） | /dashboard | 学習記録の一覧とキーワード・タグ・期間による絞り込み | [learning-records/screen/overview.md](learning-records/screen/overview.md) |
 | P04 | 学習記録 新規作成 | /records/new | 学習記録の作成 | 同上 |
-| P05 | 学習記録 詳細・編集 | /records/{id} | 詳細表示・編集・削除・ファイル添付 | 同上 |
+| P05 | 学習記録 詳細・編集 | /records/{id} | 詳細表示・編集・削除・ファイル添付・この記録を起点にしたAI参考資料生成（P07へ遷移） | 同上 |
 | P06 | タグ管理 | /tags | タグ一覧・作成・編集・削除 | [tags/screen/overview.md](tags/screen/overview.md) |
-| P07 | AI 提案 | /ai | AI による学習提案・タスク分解 | [ai/screen/overview.md](ai/screen/overview.md) |
+| P07 | AI 情報収集・提案 | /ai | Web検索と学習記録を元にした参考資料（要約HTML＋参考リンク）の生成・閲覧 | [ai/screen/overview.md](ai/screen/overview.md) |
 | P08 | 設定 | /settings | プロフィール表示・表示名変更・パスワード変更 | [settings/screen/overview.md](settings/screen/overview.md) |
 
 ### 5.2 共通レイアウト
@@ -429,7 +455,7 @@ services:
 
 ## 8. 外部 API 連携設計
 
-現状は OpenAI API のみを連携先とする。
+OpenAI API に加え、参考資料生成（F09）のためのWeb検索API（Tavily）を連携先とする。
 
 ### 8.1 OpenAI API
 
@@ -440,15 +466,29 @@ services:
 | ライブラリ | RestTemplate / OkHttp |
 | プロンプト設計 | システムプロンプトでコンテキスト付与 |
 
-**学習提案プロンプト例：**
+**参考資料の要約プロンプト例：**
 ```
-あなたはエンジニアのキャリア支援 AI です。
-以下の情報をもとに、次に学ぶべき技術を3つ提案してください。
+あなたはエンジニアの技術学習を支援するAIです。
+以下の検索結果をもとに、5分程度で読める分量のMarkdown形式の要約を作成してください。
 
-学習記録: {学習記録データ}
+興味・文脈: {ユーザーが入力した興味、または直近の学習記録}
+検索結果: {Web検索で取得した記事の本文・抜粋}
 
-JSON 形式で返答してください。
+出力はMarkdown形式のみとし、前置きや後書きは含めないでください。
 ```
+
+生成されたMarkdownは、固定のCSSテンプレートを適用してHTMLに変換してから`ai_references.summary_html`に保存する（LLMに直接HTMLを生成させないことで、崩れたマークアップが生成される失敗率を下げる）。
+
+### 8.2 Web検索 API
+
+参考資料生成の際、ユーザーの興味・直近の学習記録（または起点となった特定の学習記録）をもとに検索クエリを組み立て、実際のWeb検索結果を取得してからOpenAI APIに要約させる（LLM単体の知識だけに頼らず、最新情報を反映するため。RAG＝Retrieval-Augmented Generationの考え方）。
+
+| 項目 | 内容 |
+|---|---|
+| サービス | Tavily（LLM向けに作られた検索API。検索結果の本文抜粋まで返してくれる） |
+| 認証 | API Key（環境変数 `TAVILY_API_KEY`） |
+| 呼び出し方 | Spring の `RestClient`（`WebSearchClient`） |
+| 検索の深さ | `basic`、最大5件 |
 
 ---
 
