@@ -39,6 +39,7 @@ package com.example.backend.config;
 //     /actuator/health が返すのは「動いているかどうか」だけで、個人情報やDBの中身などの
 //     機密情報は一切含まれないため、認証なしで誰でも見られる状態にしても情報漏えいにならない。
 // ============================================================
+import com.example.backend.security.JwtAuthenticationEntryPoint;
 import com.example.backend.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -61,6 +62,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
@@ -94,6 +96,13 @@ public class SecurityConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
+            // 【学習ポイント：押さえておく・不具合修正済み】未認証（JWTが無い・不正・期限切れ）のとき
+            // どう応答するかを指定する係（AuthenticationEntryPoint）。これが無いと既定の
+            // 「何もしない403係」にフォールバックし、401を期待しているドキュメント・フロントの分岐と
+            // 食い違う（詳しくは memo/security/401と403の食い違い.md）。
+            .exceptionHandling(exceptions ->
+                exceptions.authenticationEntryPoint(jwtAuthenticationEntryPoint))
+
             // エンドポイントごとのアクセス制御
             .authorizeHttpRequests(auth -> auth
                 // /api/auth/** は認証不要（ログイン・サインアップはトークンなしで呼べる）
@@ -114,13 +123,8 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         // application.yaml で指定したオリジンのみ許可
         config.setAllowedOrigins(List.of(allowedOrigins));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        // リフレッシュトークンをHttpOnly Cookieでやり取りするために必要。
-        // ブラウザは allowCredentials が true の場合のみ、クロスオリジンのリクエストにCookieを付けて送る。
-        // setAllowedOrigins に "*"（ワイルドカード）ではなく具体的なオリジンを指定しているからこそ許可できる設定
-        // （ワイルドカードと allowCredentials(true) は仕様上併用できない）。
-        config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         // 全パスに対してCORS設定を適用
