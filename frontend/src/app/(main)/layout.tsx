@@ -47,6 +47,7 @@ import { UserProfile } from "@/lib/api-types"
 const NAV_ITEMS = [
   { href: "/dashboard", label: "ダッシュボード" },
   { href: "/tags", label: "タグ管理" },
+  { href: "/ai", label: "AI情報収集" },
 ]
 
 // ▼ layout の props は children だけ。
