@@ -1,5 +1,6 @@
 package com.example.backend.config;
 
+import com.example.backend.security.JwtAuthenticationEntryPoint;
 import com.example.backend.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +23,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
@@ -29,11 +31,9 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // CSRFを無効化: Spring Securityのこの機能はセッション認証（Cookieでログイン状態を持つ方式）
-            // 向けの対策なので、Authorizationヘッダーで認証するこのAPIには対象外。
-            // なお /api/auth/refresh・/api/auth/logout はリフレッシュトークンをHttpOnly Cookieで
-            // 受け取るためCookieは使うが、CSRF対策はここではなく下記CORS設定（許可オリジンを絞った上での
-            // allowCredentials）とSameSite=Lax属性の組み合わせで行っている。
+            // CSRFを無効化: REST APIはCookieでセッション管理しないため不要。
+            // CSRFはブラウザがCookieを自動送信する仕組みを悪用した攻撃で、
+            // JWTをAuthorizationヘッダーで送る方式では成立しない。
             .csrf(csrf -> csrf.disable())
 
             // CORSの設定を適用
@@ -43,6 +43,12 @@ public class SecurityConfig {
             // サーバーがセッションを保持しないため、毎回JWTで認証する
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+            // 未認証時のレスポンスを担うAuthenticationEntryPoint。未登録だと既定の
+            // Http403ForbiddenEntryPointにフォールバックし、401を前提にしたドキュメント・
+            // フロントの分岐と食い違うため登録する。
+            .exceptionHandling(exceptions ->
+                exceptions.authenticationEntryPoint(jwtAuthenticationEntryPoint))
 
             // エンドポイントごとのアクセス制御
             .authorizeHttpRequests(auth -> auth
@@ -64,13 +70,8 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         // application.yaml で指定したオリジンのみ許可
         config.setAllowedOrigins(List.of(allowedOrigins));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        // リフレッシュトークンをHttpOnly Cookieでやり取りするために必要。
-        // ブラウザは allowCredentials が true の場合のみ、クロスオリジンのリクエストにCookieを付けて送る。
-        // setAllowedOrigins に "*"（ワイルドカード）ではなく具体的なオリジンを指定しているからこそ許可できる設定
-        // （ワイルドカードと allowCredentials(true) は仕様上併用できない）。
-        config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         // 全パスに対してCORS設定を適用

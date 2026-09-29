@@ -4,6 +4,7 @@ import com.example.backend.config.SecurityConfig;
 import com.example.backend.dto.response.PasswordUpdateResponse;
 import com.example.backend.dto.response.UserProfileResponse;
 import com.example.backend.entity.User;
+import com.example.backend.security.JwtAuthenticationEntryPoint;
 import com.example.backend.security.JwtAuthenticationFilter;
 import com.example.backend.security.JwtTokenProvider;
 import com.example.backend.service.UserService;
@@ -50,7 +51,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // 一致した挙動になることを確認済みなのでこちらを採用する
 // ============================================================
 @WebMvcTest(UserController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtAuthenticationEntryPoint.class})
 class UserControllerTest {
 
     @Autowired
@@ -100,19 +101,16 @@ class UserControllerTest {
     class GetProfile {
 
         @Test
-        void トークン無しなら403を返しUserServiceは呼ばれない() throws Exception {
+        void トークン無しなら401を返しUserServiceは呼ばれない() throws Exception {
             // when / then：Authorizationヘッダーを付けずにリクエストする。
             //   mockMvc.perform(get(...)) が「実際にこのURLへGETリクエストを送る」操作、
             //   .andExpect(...) がその結果への確認、という役割分担
             //
-            // 注意：docs/auth/api/security.md や各error.mdは「JWT不正・未送信→401」と書いているが、
-            // 実際に動かすとSpring Securityの既定動作により403が返る。SecurityConfigに
-            // httpBasic()等のAuthenticationEntryPointを何も設定していないと、Spring Securityは
-            // 未認証アクセスの通知方法（401＋WWW-Authenticateヘッダーを出す手段）を持たないため
-            // 既定のHttp403ForbiddenEntryPointにフォールバックする。これはドキュメントと実装が
-            // 食い違っている箇所で、このテストを書いて初めて判明した。
+            // JwtAuthenticationEntryPointをSecurityConfigに登録しているため、docs/auth/api/security.md
+            // や各error.mdの通り401が返る（未登録だと既定のHttp403ForbiddenEntryPointにフォールバック
+            // して403になる）
             mockMvc.perform(get("/api/users/me"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isUnauthorized());
 
             // JwtAuthenticationFilterの時点で弾かれているはずなので、
             // その先のUserController・UserServiceには処理が届いていないことも確認する
