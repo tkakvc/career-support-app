@@ -7,12 +7,13 @@
 -- 各テーブルの定義は entity/User.java・Tag.java・LearningRecord.java・Attachment.java と1:1対応。
 
 CREATE TABLE users (
-    id            UUID PRIMARY KEY,
-    email         VARCHAR(255) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    display_name  VARCHAR(100) NOT NULL,
-    created_at    TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at    TIMESTAMP NOT NULL DEFAULT now()
+    id              UUID PRIMARY KEY,
+    email           VARCHAR(255) NOT NULL UNIQUE,
+    password_hash   VARCHAR(255) NOT NULL,
+    display_name    VARCHAR(100) NOT NULL,
+    github_username VARCHAR(100),
+    created_at      TIMESTAMP NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMP NOT NULL DEFAULT now()
 );
 
 CREATE TABLE tags (

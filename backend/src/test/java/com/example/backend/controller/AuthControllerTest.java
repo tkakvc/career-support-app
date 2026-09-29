@@ -3,6 +3,7 @@ package com.example.backend.controller;
 import com.example.backend.config.SecurityConfig;
 import com.example.backend.dto.response.AccessTokenResponse;
 import com.example.backend.dto.response.AuthResponse;
+import com.example.backend.security.JwtAuthenticationEntryPoint;
 import com.example.backend.security.JwtAuthenticationFilter;
 import com.example.backend.security.JwtTokenProvider;
 import com.example.backend.service.AuthService;
@@ -34,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // AuthServiceTest（Service層）だけではカバーできない
 // ============================================================
 @WebMvcTest(AuthController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtAuthenticationEntryPoint.class})
 class AuthControllerTest {
 
     @Autowired
