@@ -19,6 +19,7 @@ import { z } from "zod"
 
 import { useLearningRecord } from "@/hooks/useLearningRecord"
 import { useUpdateLearningRecord, useDeleteLearningRecord } from "@/hooks/useLearningRecordMutations"
+import { useGenerateReference } from "@/hooks/useAiMutations"
 import { useTags } from "@/hooks/useTags"
 import { AttachmentSection } from "@/components/features/records/AttachmentSection"
 import { Badge } from "@/components/ui/badge"
@@ -75,6 +76,7 @@ export default function RecordDetailPage() {
   const { data: tags } = useTags()
   const updateMutation = useUpdateLearningRecord()
   const deleteMutation = useDeleteLearningRecord()
+  const generateReference = useGenerateReference()
 
   // ▼ isEditing: true → 編集モード / false → 表示モード
   const [isEditing, setIsEditing] = useState(false)
@@ -82,6 +84,25 @@ export default function RecordDetailPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   // ▼ apiError: 保存失敗時のエラーメッセージ
   const [apiError, setApiError] = useState<string | null>(null)
+  // ▼ referenceError: 参考資料生成のリクエスト自体が失敗したときのエラーメッセージ
+  const [referenceError, setReferenceError] = useState<string | null>(null)
+
+  // ▼ この記録を起点に参考資料を生成し、結果を見るために/aiへ遷移する
+  //   （生成自体はAiPage側でポーリングする。ここでは受付リクエストを送るだけ）
+  const handleGenerateReference = () => {
+    setReferenceError(null)
+    generateReference.mutate(
+      { recordId: id },
+      {
+        onSuccess: (response) => {
+          router.push(response.jobId ? `/ai?jobId=${response.jobId}` : "/ai")
+        },
+        onError: () => {
+          setReferenceError("参考資料の生成に失敗しました。しばらく経ってからお試しください")
+        },
+      }
+    )
+  }
 
   const form = useForm<EditFormValues>({
     resolver: zodResolver(editSchema),
@@ -289,6 +310,9 @@ export default function RecordDetailPage() {
           ← 戻る
         </Link>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={handleGenerateReference} disabled={generateReference.isPending}>
+            {generateReference.isPending ? "生成中..." : "この記録について参考資料を作る"}
+          </Button>
           <Button variant="outline" onClick={() => setIsEditing(true)}>
             編集
           </Button>
@@ -297,6 +321,8 @@ export default function RecordDetailPage() {
           </Button>
         </div>
       </div>
+
+      {referenceError && <p className="text-destructive text-sm">{referenceError}</p>}
 
       {/* ▼ 日付 */}
       <p className="text-muted-foreground text-sm">{record.date}</p>

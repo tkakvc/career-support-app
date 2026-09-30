@@ -84,22 +84,50 @@ export interface SignupRequest {
   displayName: string;
 }
 
-export interface SuggestResponse {
-  suggestions: Suggestion[];
+export interface ReferenceRequest {
+  interest?: string;
+  // 学習記録の詳細画面から「この記録について参考資料を作る」で生成する場合だけ渡す
+  recordId?: string;
+}
+
+export interface AiReferenceLink {
+  url: string;
+  title?: string;
+}
+
+// 参考資料1件。GET /api/ai/references の配列要素、およびGET /api/ai/jobs/{jobId}のresult（DONE時）と同じ形
+// tagId/tagNameは既存タグに一致した場合だけ入る。一致しなければ両方undefinedで、代わりに
+// suggestedTagName（AIが提案しただけでまだ作られていないタグ名）が入る
+export interface AiReference {
+  id: string;
+  interest?: string;
+  summaryHtml: string;
+  tagId?: string;
+  tagName?: string;
+  suggestedTagName?: string;
+  links: AiReferenceLink[];
+  createdAt: string;
+}
+
+// POST /api/ai/references のレスポンス。
+// jobIdがあれば202（非同期で生成中）、無くmessageだけあれば200（学習記録0件などの即時応答）
+export interface AiJobAcceptedResponse {
+  jobId?: string;
   message?: string;
 }
 
-export interface Suggestion {
-  title: string;
-  reason: string;
+export type AiJobStatus = "PENDING" | "PROCESSING" | "DONE" | "FAILED";
+
+// GET /api/ai/jobs/{jobId} のレスポンス。resultはstatusがDONEのときだけAiReference
+export interface AiJobResponse {
+  status: AiJobStatus;
+  result?: AiReference;
+  message?: string;
 }
 
-export interface DecomposeRequest {
-  goal: string;
-}
-
-export interface DecomposeResponse {
-  tasks: string[];
+// GET /api/ai/references のレスポンス
+export interface AiReferenceListResponse {
+  references: AiReference[];
 }
 
 export interface UserProfile {
