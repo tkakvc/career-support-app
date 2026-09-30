@@ -34,10 +34,6 @@ public class User {
     @Column(name = "display_name", nullable = false, length = 100)
     private String displayName;
 
-    // GitHub ユーザー名。未設定の場合は null。
-    @Column(name = "github_username", length = 100)
-    private String githubUsername;
-
     // レコード INSERT 時に自動で現在日時をセットする
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
