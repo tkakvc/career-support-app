@@ -1,3 +1,5 @@
+# 参考：https://zenn.dev/not75743/articles/10014b21dfb3a0
+#
 # GitHub ActionsがAWSの長期アクセスキーを保存せず、OIDC経由の一時認証情報でECR・ECSを
 # 操作できるようにする設定。①GitHubがワークフロー実行ごとに署名付きJWTを発行→
 # ②configure-aws-credentialsがそのJWTでAWS STSにAssumeRoleWithWebIdentityを依頼→
@@ -86,4 +88,48 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
 # .github/workflows/ci.ymlのdeployジョブでrole-to-assumeとしてそのまま使う
 output "github_actions_deploy_role_arn" {
   value = aws_iam_role.github_actions_deploy.arn
+}
+
+# test-backend用の別ロール。github_actions_deployはmainブランチからの実行のみに
+# 信頼先を絞っているが、CIは全ブランチのpushで動くため、全ブランチから引き受けられる
+# 別ロールとして分離し、権限もSQSの読み取り関連のみに絞る
+resource "aws_iam_role" "github_actions_test" {
+  name = "career-support-github-actions-test"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = aws_iam_openid_connect_provider.github.arn }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+        }
+        StringLike = {
+          "token.actions.githubusercontent.com:sub" = "repo:tkakvc/career-support-app:ref:refs/heads/*"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "github_actions_test" {
+  name = "career-support-github-actions-test-policy"
+  role = aws_iam_role.github_actions_test.name
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      # BackendApplicationTests.contextLoads()が@SqsListener起動時にcareer-support-ai-jobs
+      # キューへ接続するのに必要な最小限の権限。SendMessageやDLQへの権限は使わないため含めない
+      Sid      = "SqsTestAccess"
+      Effect   = "Allow"
+      Action   = ["sqs:GetQueueUrl", "sqs:GetQueueAttributes", "sqs:ReceiveMessage", "sqs:DeleteMessage"]
+      Resource = ["arn:aws:sqs:ap-northeast-1:460677238703:career-support-ai-jobs"]
+    }]
+  })
+}
+
+# test-backendジョブのconfigure-aws-credentialsでrole-to-assumeとしてそのまま使う
+output "github_actions_test_role_arn" {
+  value = aws_iam_role.github_actions_test.arn
 }

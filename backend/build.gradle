@@ -57,4 +57,7 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	testLogging {
+		exceptionFormat = 'full' // CIログに例外の原因メッセージまで出すため
+	}
 }

@@ -67,6 +67,20 @@ resource "aws_iam_role_policy" "ecs_task" {
       Action   = "ses:SendEmail"
       Effect   = "Allow"
       Resource = "*"
+      }, {
+      # 参考資料生成（AiJobWorker）がcareer-support-ai-jobsキューを使うための権限
+      Action = [
+        "sqs:SendMessage",
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl"
+      ]
+      Effect = "Allow"
+      Resource = [
+        "arn:aws:sqs:ap-northeast-1:460677238703:career-support-ai-jobs",
+        "arn:aws:sqs:ap-northeast-1:460677238703:career-support-ai-jobs-dlq"
+      ]
     }]
     Version = "2012-10-17"
   })
