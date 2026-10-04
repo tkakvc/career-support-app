@@ -67,6 +67,23 @@ resource "aws_iam_role_policy" "ecs_task" {
       Action   = "ses:SendEmail"
       Effect   = "Allow"
       Resource = "*"
+      }, {
+      # 参考資料生成（AiJobWorker）が実際にcareer-support-ai-jobsキューを使うための権限。
+      # terraform plan時にAWS上の実体には既にこの権限が存在していたが、このファイルへの
+      # 記載が漏れていたため復元した（記載漏れのままapplyすると本番ECSタスクから
+      # SQSへのアクセス権限が削除されてしまう）。
+      Action = [
+        "sqs:SendMessage",
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl"
+      ]
+      Effect = "Allow"
+      Resource = [
+        "arn:aws:sqs:ap-northeast-1:460677238703:career-support-ai-jobs",
+        "arn:aws:sqs:ap-northeast-1:460677238703:career-support-ai-jobs-dlq"
+      ]
     }]
     Version = "2012-10-17"
   })

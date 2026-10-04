@@ -1,3 +1,6 @@
+# 参考：https://zenn.dev/not75743/articles/10014b21dfb3a0
+#   （【GitHub Actions】OpenID Connectを使用してAWSの認証を行う構成をTerraformで用意する）
+#
 # ============================================================
 # GitHub Actions が、AWSの長期パスワード（アクセスキー。AWSにログインするための
 # ID・パスワードの組。実際にはAccessKeyId・SecretAccessKeyという2つの文字列）を
@@ -203,6 +206,61 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
       }
     ]
   })
+}
+
+# ---- test-backend用の別ロール：デプロイ用ロールとは分離する ----
+#
+# 上のgithub_actions_deployロールはsubの条件がmainブランチに完全一致する場合のみ許可している
+# （デプロイをmain以外から誤発火させないための意図的な制限）。
+# しかしCI（.github/workflows/ci.ymlのtest-backendジョブ）はstudy・feature/**等、全ブランチの
+# pushで動く。BackendApplicationTests.contextLoads()はAiJobWorkerの@SqsListenerが
+# career-support-ai-jobsキューにGetQueueUrl・GetQueueAttributesを呼べないと
+# QueueAttributesResolvingExceptionで失敗するため、全ブランチでこの2つの権限が要る。
+# デプロイ用ロールのsub条件をmain限定から緩めるのではなく、全ブランチから使える別ロールを
+# 新設し、権限もSQSの読み取り関連だけに絞ることで、デプロイ権限は引き続きmain限定のまま守る。
+resource "aws_iam_role" "github_actions_test" {
+  name = "career-support-github-actions-test"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = aws_iam_openid_connect_provider.github.arn }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+        }
+        # StringLike + ワイルドカード：mainに限定せず、このリポジトリの全ブランチからの
+        # 実行を許可する（refs/heads/以降が何であっても一致する）
+        StringLike = {
+          "token.actions.githubusercontent.com:sub" = "repo:tkakvc/career-support-app:ref:refs/heads/*"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "github_actions_test" {
+  name = "career-support-github-actions-test-policy"
+  role = aws_iam_role.github_actions_test.name
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      # contextLoads()はキューにメッセージを送らない（SendMessage不要）・DLQも見ない
+      # （最小権限の原則）。ReceiveMessage/DeleteMessageは、起動直後に@SqsListenerが
+      # 始めるロングポーリングがGetQueueAttributesの直後に動くため、無いと別のエラーで失敗する。
+      Sid      = "SqsTestAccess"
+      Effect   = "Allow"
+      Action   = ["sqs:GetQueueUrl", "sqs:GetQueueAttributes", "sqs:ReceiveMessage", "sqs:DeleteMessage"]
+      Resource = ["arn:aws:sqs:ap-northeast-1:460677238703:career-support-ai-jobs"]
+    }]
+  })
+}
+
+# test-backendジョブの aws-actions/configure-aws-credentials で
+# role-to-assume としてそのまま使う
+output "github_actions_test_role_arn" {
+  value = aws_iam_role.github_actions_test.arn
 }
 
 # このロールのARN（AWSの中での一意な住所のような文字列）を、terraform apply後に

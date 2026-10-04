@@ -12,8 +12,20 @@ jobs:
   # ─────────────────────────────
   test-backend:
     runs-on: ubuntu-latest    # GitHubのサーバー（Ubuntu）で実行
+    permissions:
+      id-token: write   # OIDCのJWT発行に必要な権限。デフォルトでは付与されないので明示する
+      contents: read     # actions/checkout@v4 がリポジトリを読むための権限
     steps:
       - uses: actions/checkout@v4   # リポジトリをサーバーにcheckout
+
+      - name: AWS認証情報を取得（OIDC経由）
+        # infra/github_oidc.tf の aws_iam_role.github_actions_test をAssumeRoleWithWebIdentityで
+        # 引き受け、一時的なAWS認証情報を環境変数に設定する。これ以降のステップ（gradlew test）は
+        # 自動でこの認証情報を使う。アクセスキーをSecretsに保存する方式は使っていない
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::460677238703:role/career-support-github-actions-test
+          aws-region: ap-northeast-1
 
       - name: JDK 21 をセットアップ
         # backend/build.gradle の toolchain.languageVersion を見て確認した実際の値
