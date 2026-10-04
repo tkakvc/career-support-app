@@ -1,0 +1,5 @@
+# Terraform 作業ファイル（コミットしない）
+.terraform/
+*.tfstate
+*.tfstate.backup
+generated.tf
