@@ -12,8 +12,19 @@ jobs:
   # ─────────────────────────────
   test-backend:
     runs-on: ubuntu-latest    # GitHubのサーバー（Ubuntu）で実行
+    permissions:
+      id-token: write   # OIDCのJWT発行に必要
+      contents: read
     steps:
       - uses: actions/checkout@v4   # リポジトリをサーバーにcheckout
+
+      - name: AWS認証情報を取得（OIDC経由）
+        # infra/github_oidc.tf の aws_iam_role.github_actions_test を引き受ける。
+        # BackendApplicationTests.contextLoads()がSQSキューに接続するために必要
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::460677238703:role/career-support-github-actions-test
+          aws-region: ap-northeast-1
 
       - name: JDK 21 をセットアップ
         # backend/build.gradle の toolchain.languageVersion を見て確認した実際の値
