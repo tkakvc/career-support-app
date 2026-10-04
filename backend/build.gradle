@@ -74,4 +74,10 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// デフォルトのexceptionFormatは'short'で、原因（Caused by）のクラス名・行番号しか
+	// CIログに出ない。QueueAttributesResolvingExceptionの実際の原因（AWSが返した
+	// エラーメッセージ）を見るためにfullに変更した
+	testLogging {
+		exceptionFormat = 'full'
+	}
 }

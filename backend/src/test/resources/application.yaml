@@ -13,9 +13,12 @@ spring:
     aws:
       region:
         static: ap-northeast-1
-      credentials:
-        access-key: dummy-access-key-for-tests
-        secret-key: dummy-secret-key-for-tests
+      # credentials.access-key/secret-keyにダミー値を固定で書いていたが削除した。
+      # これがあると、CIがOIDCで取得した本物の一時認証情報（環境変数AWS_ACCESS_KEY_ID等）を
+      # 上書きしてしまい、SQSへの接続が「The security token included in the request is
+      # invalid」(403)で失敗する。削除することでデフォルトの認証情報プロバイダチェーン
+      # （環境変数→~/.aws/credentials→EC2/ECSのメタデータ、の順で探す仕組み）が使われ、
+      # ローカルではaws configureで設定した自分の認証情報、CIではOIDCの一時認証情報が使われる。
 
 app:
   jwt:
