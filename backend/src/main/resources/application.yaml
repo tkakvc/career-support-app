@@ -48,9 +48,6 @@ spring:
     aws:
       region:
         static: ${AWS_REGION:ap-northeast-1}
-      credentials:
-        # ローカル開発・ECSともにIAMロール/認証情報チェーンから自動取得する（アクセスキーを直接書かない）
-        instance-profile: true
 
 app:
   jwt:

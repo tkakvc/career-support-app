@@ -1,8 +1,10 @@
 app:
   jwt:
     secret: 32文字以上の適当な文字列に置き換える
+  websearch:
+    api-key: 実際のTavily APIキー（AI機能を試さないなら dummy でOK）
 
 spring:
   ai:
     openai:
-      api-key: 実際のAPIキー（AI機能を試さないなら dummy でOK）
+      api-key: 実際のOpenAI APIキー（AI機能を試さないなら dummy でOK）
