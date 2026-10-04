@@ -39,6 +39,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.moderation.Moderation;
 import org.springframework.ai.moderation.ModerationModel;
 import org.springframework.ai.moderation.ModerationPrompt;
+import org.springframework.ai.openai.OpenAiModerationOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -76,6 +77,12 @@ public class AiService {
     private static final int SEARCH_QUERY_SEED_LENGTH = 100;
     private static final String NO_RECORDS_MESSAGE = "学習記録がまだありません。記録を追加すると参考資料が生成できるようになります。";
     private static final String MODERATION_REJECT_MESSAGE = "不適切な内容が含まれています";
+    // Spring AI 1.0.0-M6のOpenAiModerationModel自動設定は、application.yamlの
+    // spring.ai.openai.moderation.options.modelをdefaultOptionsに反映しないバグがあり、
+    // 指定しないとライブラリ内蔵の固定デフォルト（text-moderation-latest、OpenAI側で廃止済み）が
+    // 使われ400エラーになる（実際に動かして確認した）。呼び出し側でOpenAiModerationOptionsを
+    // 明示的に渡すことで回避する
+    private static final String MODERATION_MODEL = "omni-moderation-latest";
     private static final String AI_FAILURE_MESSAGE = "現在AIサービスが利用できません。しばらく経ってから再度お試しください";
 
     private static final int MAX_RETRY = 1;
@@ -330,7 +337,8 @@ public class AiService {
     // 正式リリース版で変わる可能性があるため、正確な連鎖を覚えるより「ModerationModelにテキストを渡すと
     // flaggedを含む結果が返ってくる」という役割だけ覚えておき、使うたびにIDEの補完かjavapで確認すればよい。
     private void checkModeration(String text) {
-        Moderation moderation = moderationModel.call(new ModerationPrompt(text)).getResult().getOutput();
+        ModerationPrompt prompt = new ModerationPrompt(text, OpenAiModerationOptions.builder().model(MODERATION_MODEL).build());
+        Moderation moderation = moderationModel.call(prompt).getResult().getOutput();
         boolean flagged = moderation.getResults().get(0).isFlagged();
         if (flagged) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, MODERATION_REJECT_MESSAGE);
