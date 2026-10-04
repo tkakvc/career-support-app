@@ -23,6 +23,7 @@ import com.example.backend.repository.TagRepository;
 import com.example.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -36,7 +37,12 @@ import java.util.List;
 //
 // implements CommandLineRunner: Spring Boot が用意しているインターフェース。
 // これを実装したクラスは、アプリの起動処理が全部終わった直後に run() が自動で呼ばれる。
+//
+// 【不具合修正済み】@Profile("local")が無いと全環境で実行され、固定パスワード
+// （password123）のテストユーザーが本番DBにも作られてしまう。"local"プロファイルが
+// 有効な時だけこのクラスをDIコンテナに登録するよう絞り、本番（ECS）では実行されないようにした。
 @Component
+@Profile("local")
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
