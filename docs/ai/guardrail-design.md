@@ -200,7 +200,8 @@ Spring AIがOpenAIのModeration API向けに用意している`ModerationModel`�
 
 ```java
 private void checkModeration(String text) {
-    Moderation moderation = moderationModel.call(new ModerationPrompt(text)).getResult().getOutput();
+    ModerationPrompt prompt = new ModerationPrompt(text, OpenAiModerationOptions.builder().model(MODERATION_MODEL).build());
+    Moderation moderation = moderationModel.call(prompt).getResult().getOutput();
     boolean flagged = moderation.getResults().get(0).isFlagged();
     if (flagged) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, MODERATION_REJECT_MESSAGE);
@@ -209,6 +210,8 @@ private void checkModeration(String text) {
 ```
 
 `interest`・学習記録の内容（`recordsText`）・`focusRecordText`を結合した文字列に対して通す（結局OpenAIに送られる入力である点は同じなので、入力経路として同列に扱う）。
+
+モデル名（`MODERATION_MODEL = "omni-moderation-latest"`）を呼び出し側で明示しているのは、Spring AI 1.0.0-M6の`OpenAiModerationModel`自動設定が`application.yaml`の`spring.ai.openai.moderation.options.model`を反映しないバグがあるため。指定しないとライブラリ内蔵のデフォルト（`text-moderation-latest`、OpenAI側で既に廃止済み）が使われ、400エラーになる（実際に動かして発覚・修正した）。
 
 ### 項目7（NGワード）との役割分担
 
