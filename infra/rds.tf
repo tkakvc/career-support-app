@@ -13,24 +13,29 @@ resource "aws_db_subnet_group" "main" {
 }
 
 resource "aws_db_instance" "main" {
-  allocated_storage                     = 20
-  allow_major_version_upgrade           = null
-  apply_immediately                     = null
-  auto_minor_version_upgrade            = true
-  availability_zone                     = "ap-northeast-1a"
-  backup_retention_period               = 7
-  backup_target                         = "region"
-  backup_window                         = "14:31-15:01"
-  ca_cert_identifier                    = "rds-ca-rsa2048-g1"
-  copy_tags_to_snapshot                 = true
-  custom_iam_instance_profile           = null
-  customer_owned_ip_enabled             = false
-  database_insights_mode                = "standard"
-  db_name                               = "career_db"
-  db_subnet_group_name                  = aws_db_subnet_group.main.name
-  dedicated_log_volume                  = false
-  delete_automated_backups              = true
-  deletion_protection                   = true
+  count = var.enabled ? 1 : 0
+
+  allocated_storage           = 20
+  allow_major_version_upgrade = null
+  apply_immediately           = null
+  auto_minor_version_upgrade  = true
+  availability_zone           = "ap-northeast-1a"
+  backup_retention_period     = 7
+  backup_target               = "region"
+  backup_window               = "14:31-15:01"
+  ca_cert_identifier          = "rds-ca-rsa2048-g1"
+  copy_tags_to_snapshot       = true
+  custom_iam_instance_profile = null
+  customer_owned_ip_enabled   = false
+  database_insights_mode      = "standard"
+  db_name                     = "career_db"
+  db_subnet_group_name        = aws_db_subnet_group.main.name
+  dedicated_log_volume        = false
+  delete_automated_backups    = true
+  # 削除保護。trueだとAWS側で削除がブロックされ、enabled=false での停止（削除）が失敗する。
+  # このPFは選考で見せるとき以外は落としておく運用で、DBに保持すべきデータも無い
+  # （学習記録のテストデータのみ。復活時はFlywayのマイグレーションで作り直す）ため false にする。
+  deletion_protection                   = false
   domain                                = null
   domain_auth_secret_arn                = null
   domain_iam_role_name                  = null

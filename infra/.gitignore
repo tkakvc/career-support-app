@@ -2,4 +2,7 @@
 .terraform/
 *.tfstate
 *.tfstate.backup
+# terraform state mv 実行時に作られる terraform.tfstate.<連番>.backup も除外する
+# （上の *.tfstate.backup パターンでは一致しない）
+*.tfstate.*.backup
 generated.tf
