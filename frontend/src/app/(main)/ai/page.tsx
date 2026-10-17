@@ -51,7 +51,12 @@ function errorMessage(error: unknown): string {
 // summaryHtmlはOpenAIが生成したMarkdownをHTML化したもの。学習記録のcontent欄（プレーンテキスト）の
 // 初期値としてそのまま貼ると崩れるため、タグを取り除いた簡易プレビュー用途にだけ使う
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+  // style要素は先に中身ごと落とす。タグだけを剥がすとCSSの本文が残り、抜粋に混ざるため
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
 }
 
 export default function AiPage() {

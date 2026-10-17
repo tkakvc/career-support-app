@@ -6,6 +6,8 @@ resource "aws_elasticache_subnet_group" "cache" {
 
 # Redis 本体
 resource "aws_elasticache_cluster" "redis" {
+  count = var.enabled ? 1 : 0
+
   cluster_id         = "career-support-redis"
   engine             = "redis"
   node_type          = "cache.t3.micro"
