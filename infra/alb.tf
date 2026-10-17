@@ -13,6 +13,8 @@
 
 # --- 本体（ALB） ---
 resource "aws_lb" "main" {
+  count = var.enabled ? 1 : 0
+
   client_keep_alive                           = 3600
   customer_owned_ipv4_pool                    = null
   desync_mitigation_mode                      = "defensive"
@@ -65,6 +67,8 @@ resource "aws_lb" "main" {
 
 # --- ターゲットグループ（Spring Boot: 8080 / Next.js: 3000） ---
 resource "aws_lb_target_group" "springboot" {
+  count = var.enabled ? 1 : 0
+
   deregistration_delay               = "300"
   ip_address_type                    = "ipv4"
   lambda_multi_value_headers_enabled = null
@@ -122,6 +126,8 @@ resource "aws_lb_target_group" "springboot" {
 }
 
 resource "aws_lb_target_group" "nextjs" {
+  count = var.enabled ? 1 : 0
+
   deregistration_delay               = "300"
   ip_address_type                    = "ipv4"
   lambda_multi_value_headers_enabled = null
@@ -180,15 +186,22 @@ resource "aws_lb_target_group" "nextjs" {
 
 # --- リスナー（443: HTTPS / 80: HTTP→443へリダイレクト） ---
 resource "aws_lb_listener" "https" {
+  count = var.enabled ? 1 : 0
+
   alpn_policy                          = null
   certificate_arn                      = "arn:aws:acm:ap-northeast-1:460677238703:certificate/c4731e06-b093-4157-9aca-67b0d48431bd"
-  load_balancer_arn                    = aws_lb.main.arn
+  load_balancer_arn                    = aws_lb.main[0].arn
   port                                 = 443
   protocol                             = "HTTPS"
   routing_http_response_server_enabled = true
-  ssl_policy                           = "ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09"
-  tags                                 = {}
-  tags_all                             = {}
+  # CloudFrontからのオリジン接続はTLSv1.2まで（CloudFrontのorigin_ssl_protocolsは
+  # TLSv1.2が上限で、TLSv1.3は選択肢に無い仕様）。Res-PQ（Post-Quantum制限）付きの
+  # ポリシーだとCloudFrontのTLS1.2クライアントと暗号スイートが噛み合わず、
+  # CloudFront→ALB間の接続が502になっていた（実際に本番で発生して気づいた）。
+  # TLS1.2/1.3両対応でPQ制限の無い標準ポリシーに変更
+  ssl_policy = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  tags       = {}
+  tags_all   = {}
   default_action {
     order            = 1
     target_group_arn = null
@@ -207,9 +220,11 @@ resource "aws_lb_listener" "https" {
 }
 
 resource "aws_lb_listener" "http" {
+  count = var.enabled ? 1 : 0
+
   alpn_policy                          = null
   certificate_arn                      = null
-  load_balancer_arn                    = aws_lb.main.arn
+  load_balancer_arn                    = aws_lb.main[0].arn
   port                                 = 80
   protocol                             = "HTTP"
   routing_http_response_server_enabled = true

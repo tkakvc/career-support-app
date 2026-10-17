@@ -52,14 +52,18 @@ resource "aws_ecs_task_definition" "springboot" {
       ]
       environment = [
         {
+          # RDSのエンドポイントをベタ書きせずリソース参照にする。RDSを削除して作り直すと
+          # ホスト名（career-support-db.<ランダム文字列>.ap-northeast-1.rds.amazonaws.com）が
+          # 変わるため、ベタ書きのままだとDBに繋がらなくなる。
+          # enabled=false（RDS削除）のときはタスクを起動しないので、ダミー値でよい。
           name  = "SPRING_DATASOURCE_URL"
-          value = "jdbc:postgresql://career-support-db.cmbwo5mc1uvt.ap-northeast-1.rds.amazonaws.com:5432/career_db"
+          value = "jdbc:postgresql://${coalesce(one(aws_db_instance.main[*].address), "disabled")}:5432/career_db"
         },
         {
           # リフレッシュトークンの保存先Redis。application.yaml の ${REDIS_HOST:localhost} が読む名前に一致させる。
           # 値はフェーズ7-2で作成した ElastiCache のノードエンドポイントを参照（ベタ書きしない）。
           name  = "REDIS_HOST"
-          value = aws_elasticache_cluster.redis.cache_nodes[0].address
+          value = coalesce(one(aws_elasticache_cluster.redis[*].cache_nodes[0].address), "disabled")
         },
         {
           # 添付ファイルの保存先を本番ではS3に切り替える（デフォルトはlocal。application.yamlのstorage.type参照）。
@@ -109,11 +113,13 @@ resource "aws_ecs_task_definition" "springboot" {
 
 # __generated__ by Terraform from "career-support-cluster/springboot-service"
 resource "aws_ecs_service" "springboot" {
+  count = var.enabled ? 1 : 0
+
   availability_zone_rebalancing      = "ENABLED"
   cluster                            = aws_ecs_cluster.main.arn
   deployment_maximum_percent         = 200
   deployment_minimum_healthy_percent = 100
-  desired_count                      = 0
+  desired_count                      = var.desired_count
   enable_ecs_managed_tags            = true
   enable_execute_command             = false
   force_delete                       = null
@@ -141,7 +147,7 @@ resource "aws_ecs_service" "springboot" {
     container_name   = "springboot"
     container_port   = 8080
     elb_name         = null
-    target_group_arn = aws_lb_target_group.springboot.arn
+    target_group_arn = aws_lb_target_group.springboot[0].arn
   }
   network_configuration {
     assign_public_ip = true
@@ -152,11 +158,13 @@ resource "aws_ecs_service" "springboot" {
 
 # nextjs サービス（Redis不要なのでタスク定義は文字列参照のまま。TF書き起こしはしていない）
 resource "aws_ecs_service" "nextjs" {
+  count = var.enabled ? 1 : 0
+
   availability_zone_rebalancing      = "ENABLED"
   cluster                            = aws_ecs_cluster.main.arn
   deployment_maximum_percent         = 200
   deployment_minimum_healthy_percent = 100
-  desired_count                      = 0
+  desired_count                      = var.desired_count
   enable_ecs_managed_tags            = true
   enable_execute_command             = false
   force_delete                       = null
@@ -184,7 +192,7 @@ resource "aws_ecs_service" "nextjs" {
     container_name   = "nextjs"
     container_port   = 3000
     elb_name         = null
-    target_group_arn = aws_lb_target_group.nextjs.arn
+    target_group_arn = aws_lb_target_group.nextjs[0].arn
   }
   network_configuration {
     assign_public_ip = true

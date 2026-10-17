@@ -125,6 +125,11 @@ public class SecurityConfig {
         config.setAllowedOrigins(List.of(allowedOrigins));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
+        // ブラウザは allowCredentials が true の場合のみ、クロスオリジンのリクエストにCookieを付けて送る。
+        // リフレッシュトークンをHttpOnly Cookieで送受信する設計（frontend/src/lib/api.tsのwithCredentials: true）
+        // に必須。setAllowedOrigins に "*"（ワイルドカード）ではなく具体的なオリジンを指定しているからこそ
+        // 許可できる設定（ワイルドカードと allowCredentials(true) は仕様上併用できない）。
+        config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         // 全パスに対してCORS設定を適用

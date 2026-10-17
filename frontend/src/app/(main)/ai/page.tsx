@@ -52,9 +52,17 @@ function errorMessage(error: unknown): string {
 }
 
 // summaryHtmlはOpenAIが生成したMarkdownをHTML化したもの。学習記録のcontent欄（プレーンテキスト）の
-// 初期値としてそのまま貼ると崩れるため、タグを取り除いた簡易プレビュー用途にだけ使う
+// 初期値としてそのまま貼ると崩れるため、タグを取り除いた簡易プレビュー用途にだけ使う。
+// <style>...</style>は先に丸ごと（タグと中身のCSSごと）取り除く必要がある。
+// <[^>]*>はタグそのもの（< と >で囲まれた部分）しか消さないため、これだけだと
+// <style>タグの中身（CSSのテキスト）がプレーンテキストとして残ってしまう
+// （実際にcontent欄の先頭にCSSが混ざって表示される不具合が起きた）
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
 }
 
 export default function AiPage() {

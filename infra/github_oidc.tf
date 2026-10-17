@@ -196,9 +196,9 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
       {
         # 新しいイメージをpushした後、ECSに「新しいイメージを取り直して再起動して」と指示するのに必要。
         # Resourceでこのアプリの2サービスだけに絞っている（他のECSクラスタ・サービスには触れない）。
-        Sid      = "EcsRedeploy"
-        Effect   = "Allow"
-        Action   = ["ecs:UpdateService", "ecs:DescribeServices"]
+        Sid    = "EcsRedeploy"
+        Effect = "Allow"
+        Action = ["ecs:UpdateService", "ecs:DescribeServices"]
         Resource = [
           "arn:aws:ecs:ap-northeast-1:460677238703:service/career-support-cluster/springboot-service",
           "arn:aws:ecs:ap-northeast-1:460677238703:service/career-support-cluster/nextjs-service"

@@ -13,6 +13,8 @@ resource "aws_db_subnet_group" "main" {
 }
 
 resource "aws_db_instance" "main" {
+  count = var.enabled ? 1 : 0
+
   allocated_storage                     = 20
   allow_major_version_upgrade           = null
   apply_immediately                     = null
@@ -30,7 +32,10 @@ resource "aws_db_instance" "main" {
   db_subnet_group_name                  = aws_db_subnet_group.main.name
   dedicated_log_volume                  = false
   delete_automated_backups              = true
-  deletion_protection                   = true
+  # 削除保護。trueだとAWS側で削除がブロックされ、enabled=false での停止（削除）が失敗する。
+  # このPFは選考で見せるとき以外は落としておく運用で、DBに保持すべきデータも無い
+  # （学習記録のテストデータのみ。復活時はFlywayのマイグレーションで作り直す）ため false にする。
+  deletion_protection                   = false
   domain                                = null
   domain_auth_secret_arn                = null
   domain_iam_role_name                  = null

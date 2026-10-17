@@ -89,9 +89,17 @@ resource "aws_cloudfront_distribution" "main" {
     }
   }
   origin {
-    connection_attempts      = 3
-    connection_timeout       = 10
-    domain_name              = "career-support-alb-1434304583.ap-northeast-1.elb.amazonaws.com"
+    connection_attempts = 3
+    connection_timeout  = 10
+    # ALBの生のAWSドメイン名（career-support-alb-....elb.amazonaws.com）を直接指定していたが、
+    # ALBの証明書はokuyamat.click・*.okuyamat.clickしかカバーしておらず、CloudFrontは
+    # カスタムオリジンへのHTTPS接続時に証明書とこのdomain_nameの一致を検証するため、
+    # 一致せず502になっていた（実際に本番で発生して気づいた）。
+    # origin.okuyamat.click という、ワイルドカード証明書でカバーされる専用のサブドメインを
+    # Route53に作り、そちらをALBに向けることで証明書の対象に一致させる。
+    # okuyamat.click・www.okuyamat.click自体はCloudFrontを指しているため、それらを
+    # オリジンのdomain_nameに使うと「CloudFrontが自分自身を呼ぶ」循環参照になり使えない。
+    domain_name              = aws_route53_record.alb_origin.fqdn
     origin_access_control_id = null
     origin_id                = "career-support-alb-1434304583.ap-northeast-1.elb.amazonaws.com-mrpxe2ctl6d"
     origin_path              = null
@@ -129,4 +137,32 @@ resource "aws_cloudfront_distribution" "main" {
     minimum_protocol_version       = "TLSv1.2_2021"
     ssl_support_method             = "sni-only"
   }
+}
+
+# okuyamat.clickのホストゾーン（Route53 Registrarで作成済み・未import）。
+# 上のCloudFrontオリジンの証明書問題を直すため、ALB専用のサブドメインを1つ追加するために参照する
+data "aws_route53_zone" "main" {
+  name         = "okuyamat.click"
+  private_zone = false
+}
+
+# CloudFrontがALBオリジンへのHTTPS接続時に使うサブドメイン。*.okuyamat.clickの
+# ワイルドカード証明書でカバーされるため、ここをdomain_nameに使うとALBの証明書と一致する。
+# okuyamat.click・www.okuyamat.click自体はCloudFrontを指しているので使えない（循環参照になる）。
+resource "aws_route53_record" "alb_origin" {
+  zone_id = data.aws_route53_zone.main.zone_id
+  name    = "origin.okuyamat.click"
+  type    = "CNAME"
+  ttl     = 300
+  # ALBのDNS名を実値で書かず、リソース参照にする。ALBを一度削除して作り直すと
+  # DNS名の末尾（career-support-alb-<数字>）が変わるため、実値のままだと
+  # 存在しない古いALBを指し続けてCloudFront経由のアクセスが落ちる。
+  #
+  # enabled=false（ALB削除）のときは参照先が無くなるので、ダミーのホスト名を入れて
+  # このレコード自体は残す。レコードを消すとCloudFrontのオリジン設定（上の
+  # domain_name = aws_route53_record.alb_origin.fqdn）も作り直しになり、
+  # 停止・復活のたびにCloudFrontの再デプロイ（十数分）が発生してしまうため。
+  # 停止中はCloudFront経由のアクセスが502になるが、意図して止めている状態なので許容する。
+  # one(...) はリストの要素が0個ならnullを返す関数。count=0のときの参照エラーを避けるために使う。
+  records = [coalesce(one(aws_lb.main[*].dns_name), "disabled.okuyamat.click")]
 }

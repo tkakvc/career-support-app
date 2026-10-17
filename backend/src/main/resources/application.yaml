@@ -23,10 +23,14 @@ spring:
     show-sql: true
 
   flyway:
-    # 既存のテーブル（ddl-auto: updateで作成済み）をFlyway導入前の状態として扱い、
-    # V1（このタイミングで追加するai_jobsテーブル）から管理を始める
+    # 既存のテーブル（ddl-auto: updateで作成済み）をFlyway導入前の状態として扱う。
+    # V1__baseline_schema.sqlはその時点の全テーブルをそのままCREATE TABLEした「スナップショット」なので、
+    # 既存DBは既にV1の内容を満たしている＝baseline-versionはV1と同じ1にする（0のままだとV1自体が
+    # 「まだ適用されていない」scopeに入ってしまい、既存テーブルとCREATE TABLEが衝突してエラーになる。
+    # 実際に本番で発生して気づいた）。baseline-on-migrateは「schema_historyが無く、かつ中身が空でない
+    # DBにだけ」作用する仕組みなので、CI等の空のDBには影響しない
     baseline-on-migrate: true
-    baseline-version: 0
+    baseline-version: 1
 
   servlet:
     multipart:
